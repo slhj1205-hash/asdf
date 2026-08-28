@@ -98,7 +98,7 @@ impl App {
 
         let (youtube_tx, youtube_rx) = youtube::channel();
 
-        App {
+        let mut app = App {
             library,
             queue,
             queue_source: QueueSource::Library,
@@ -120,7 +120,9 @@ impl App {
             youtube_tx,
             youtube_rx,
             deferred_warnings: Vec::new(),
-        }
+        };
+        app.reset_playlist_browse_selection();
+        app
     }
 
     pub fn apply_view_state(&mut self, state: config::ViewState) {

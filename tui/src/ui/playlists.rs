@@ -62,7 +62,7 @@ fn render_browsing(app: &mut App, area: Rect, buf: &mut Buffer) -> PanelHeight {
             match_count,
             border_style,
         );
-        titled_block_split(left_title, Line::from(""), border_style)
+        titled_block_split(left_title, None, border_style)
     };
 
     let inner_height = block.inner(area).height as usize;

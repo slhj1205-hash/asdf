@@ -376,7 +376,11 @@ pub fn render_song_list_panel(
         unfocused_style()
     };
     let left_title = search_title(title_prefix, search_mode_open, query, match_count, border_style);
-    let right_title = sort_title(category_label, sort_label, border_style);
+    let right_title = if search_mode_open || is_filtering(query) {
+        None
+    } else {
+        Some(sort_title(category_label, sort_label, border_style))
+    };
     let block = titled_block_split(left_title, right_title, border_style);
 
     let inner_height = block.inner(area).height as usize;

@@ -13,9 +13,6 @@ pub struct DirScanState {
     pub pending_scan: Option<PathBuf>,
 }
 
-/// Measured page heights, written only by the draw pass and read by paging
-/// (`jump_page`). Valid because `run()` draws before polling for input; a
-/// test that drives keys without rendering must seed a height first.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct MeasuredLayout {
     pub library_page_height: usize,

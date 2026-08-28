@@ -70,13 +70,18 @@ pub fn titled_block(title: impl Into<String>, border_style: Style) -> Block<'sta
 
 pub fn titled_block_split(
     left: Line<'static>,
-    right: Line<'static>,
+    right: Option<Line<'static>>,
     border_style: Style,
 ) -> Block<'static> {
-    Block::bordered()
+    let mut block = Block::bordered()
         .title(left.alignment(Alignment::Left))
-        .title(right.alignment(Alignment::Right))
-        .border_style(border_style)
+        .border_style(border_style);
+
+    if let Some(r) = right {
+        block = block.title(r.alignment(Alignment::Right))
+    }
+
+    block
 }
 
 pub fn modal_block(title: impl Into<String>) -> Block<'static> {
