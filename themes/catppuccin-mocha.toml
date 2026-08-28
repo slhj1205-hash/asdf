@@ -1,0 +1,50 @@
+# Lyre theme file — Catppuccin Mocha flavor.
+# Copy to ~/.config/lyre/theme.toml and edit.
+# Any key left out keeps its default shown here.
+# Every value is a hex color: "#rgb" or "#rrggbb".
+#
+# Text
+text_primary = "#cdd6f4"
+text_secondary = "#bac2de"
+text_muted = "#a6adc8"
+text_dim = "#6c7086"
+status_info = "#bac2de"
+
+# Feedback states
+success = "#a6e3a1"
+warning = "#f9e2af"
+error = "#f38ba8"
+
+# Focus and highlights
+focus = "#fab387"
+key_hint = "#89dceb"
+highlight = "#74c7ec"
+
+# Panel titles and row content
+title = "#cdd6f4"
+title_current = "#b4befe"
+artist = "#fab387"
+detail = "#6c7086"
+separator = "#6c7086"
+section_header = "#7f849c"
+empty_state = "#6c7086"
+missing_song = "#6c7086"
+now_playing_marker_idle = "#6c7086"
+
+# Playlist panel
+playlist_name = "#cdd6f4"
+playlist_song_count = "#89b4fa"
+playlist_tag = "#cba6f7"
+
+# Modal and selection surfaces
+modal_background = "#181825"
+selected_background = "#313244"
+visual_selection_background = "#11111b"
+
+# Dimming behind modals
+dim_foreground = "#585b70"
+dim_background = "#11111b"
+
+# Progress gauge
+gauge_foreground = "#b4befe"
+gauge_background = "#313244"

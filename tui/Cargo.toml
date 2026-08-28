@@ -1,0 +1,28 @@
+[package]
+name = "lyre-tui"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+name = "lyre_tui"
+path = "src/lib.rs"
+
+[dependencies]
+lyre-core = { path = "../core", default-features = false }
+unicode-width.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+ratatui.workspace = true
+crossterm.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+
+[features]
+default = ["youtube", "gstreamer"]
+youtube = ["lyre-core/youtube"]
+gstreamer = ["lyre-core/gstreamer"]

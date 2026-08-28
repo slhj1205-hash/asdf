@@ -1,0 +1,2 @@
+requires gstreamer
+linux only

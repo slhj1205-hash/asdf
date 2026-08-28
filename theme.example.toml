@@ -1,0 +1,49 @@
+# Lyre theme file. Copy to ~/.config/lyre/theme.toml and edit.
+# Any key left out keeps its default shown here.
+# Every value is a hex color: "#rgb" or "#rrggbb".
+#
+# Text
+text_primary = "#f1f5f9"
+text_secondary = "#e2e8f0"
+text_muted = "#94a3b8"
+text_dim = "#64748b"
+status_info = "#cbd5e1"
+
+# Feedback states
+success = "#4ade80"
+warning = "#fbbf24"
+error = "#f87171"
+
+# Focus and highlights
+focus = "#facc15"
+key_hint = "#67e8f9"
+highlight = "#22d3ee"
+
+# Panel titles and row content
+title = "#f1f5f9"
+title_current = "#67e8f9"
+artist = "#fed7aa"
+detail = "#475569"
+separator = "#475569"
+section_header = "#94a3b8"
+empty_state = "#64748b"
+missing_song = "#64748b"
+now_playing_marker_idle = "#475569"
+
+# Playlist panel
+playlist_name = "#f1f5f9"
+playlist_song_count = "#7dd3fc"
+playlist_tag = "#c4b5fd"
+
+# Modal and selection surfaces
+modal_background = "#0f172a"
+selected_background = "#1e293b"
+visual_selection_background = "#083344"
+
+# Dimming behind modals
+dim_foreground = "#334155"
+dim_background = "#020617"
+
+# Progress gauge
+gauge_foreground = "#ffffff"
+gauge_background = "#000000"

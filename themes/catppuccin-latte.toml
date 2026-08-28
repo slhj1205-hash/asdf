@@ -1,0 +1,50 @@
+# Lyre theme file — Catppuccin Latte flavor (light).
+# Copy to ~/.config/lyre/theme.toml and edit.
+# Any key left out keeps its default shown here.
+# Every value is a hex color: "#rgb" or "#rrggbb".
+#
+# Text
+text_primary = "#4c4f69"
+text_secondary = "#5c5f77"
+text_muted = "#6c6f85"
+text_dim = "#9ca0b0"
+status_info = "#5c5f77"
+
+# Feedback states
+success = "#40a02b"
+warning = "#df8e1d"
+error = "#d20f39"
+
+# Focus and highlights
+focus = "#fe640b"
+key_hint = "#04a5e5"
+highlight = "#209fb5"
+
+# Panel titles and row content
+title = "#4c4f69"
+title_current = "#7287fd"
+artist = "#fe640b"
+detail = "#9ca0b0"
+separator = "#9ca0b0"
+section_header = "#8c8fa1"
+empty_state = "#9ca0b0"
+missing_song = "#9ca0b0"
+now_playing_marker_idle = "#9ca0b0"
+
+# Playlist panel
+playlist_name = "#4c4f69"
+playlist_song_count = "#1e66f5"
+playlist_tag = "#8839ef"
+
+# Modal and selection surfaces
+modal_background = "#e6e9ef"
+selected_background = "#ccd0da"
+visual_selection_background = "#dce0e8"
+
+# Dimming behind modals
+dim_foreground = "#acb0be"
+dim_background = "#dce0e8"
+
+# Progress gauge
+gauge_foreground = "#7287fd"
+gauge_background = "#ccd0da"

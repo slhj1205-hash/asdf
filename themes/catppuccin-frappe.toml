@@ -1,0 +1,50 @@
+# Lyre theme file — Catppuccin Frappé flavor.
+# Copy to ~/.config/lyre/theme.toml and edit.
+# Any key left out keeps its default shown here.
+# Every value is a hex color: "#rgb" or "#rrggbb".
+#
+# Text
+text_primary = "#c6d0f5"
+text_secondary = "#b5bfe2"
+text_muted = "#a5adce"
+text_dim = "#737994"
+status_info = "#b5bfe2"
+
+# Feedback states
+success = "#a6d189"
+warning = "#e5c890"
+error = "#e78284"
+
+# Focus and highlights
+focus = "#ef9f76"
+key_hint = "#99d1db"
+highlight = "#85c1dc"
+
+# Panel titles and row content
+title = "#c6d0f5"
+title_current = "#babbf1"
+artist = "#ef9f76"
+detail = "#737994"
+separator = "#737994"
+section_header = "#838ba7"
+empty_state = "#737994"
+missing_song = "#737994"
+now_playing_marker_idle = "#737994"
+
+# Playlist panel
+playlist_name = "#c6d0f5"
+playlist_song_count = "#8caaee"
+playlist_tag = "#ca9ee6"
+
+# Modal and selection surfaces
+modal_background = "#292c3c"
+selected_background = "#414559"
+visual_selection_background = "#232634"
+
+# Dimming behind modals
+dim_foreground = "#626880"
+dim_background = "#232634"
+
+# Progress gauge
+gauge_foreground = "#babbf1"
+gauge_background = "#414559"

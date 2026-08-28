@@ -1,0 +1,27 @@
+[package]
+name = "lyre-core"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+name = "lyre_core"
+path = "src/lib.rs"
+
+[dependencies]
+rayon.workspace = true
+lofty.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+gstreamer = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile = "3"
+
+[features]
+default = ["youtube", "gstreamer"]
+youtube = []
+gstreamer = ["dep:gstreamer"]
