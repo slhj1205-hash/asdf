@@ -1,10 +1,3 @@
-#[cfg(not(unix))]
-compile_error!(
-    "lyre supports Unix-like systems only: it reads /dev/urandom for randomness and encodes \
-     playback URIs from raw Unix path bytes. Porting means replacing core::random and \
-     core::player::path_to_uri."
-);
-
 pub mod atomic;
 pub mod fnv;
 pub mod fuzzy;
