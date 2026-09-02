@@ -3,6 +3,7 @@ use ratatui::widgets::ListState;
 use lyre_core::{FuzzyQuery, PlaylistId, SongId};
 
 use crate::keymap::{self, Action, Direction};
+use crate::strings;
 
 use super::App;
 use super::state::{
@@ -113,13 +114,13 @@ impl App {
         }
 
         let Some(Row::Song(id, _)) = self.selected_row() else {
-            self.set_status("select a song first", StatusKind::Info);
+            self.set_status(strings::SELECT_SONG_FIRST, StatusKind::Info);
             return;
         };
         *self.active_visual_mut() = Some(VisualSelection { anchor: id });
         self.set_status(
             format!(
-                "visual selection started -- move the cursor, then press {}",
+                "visual selection started — move the cursor, then press {}",
                 keymap::display_for(Action::OpenSongModal)
             ),
             StatusKind::Info,
@@ -310,13 +311,13 @@ impl App {
 
     pub(super) fn jump_to_current(&mut self) {
         let Some(current) = self.queue.current_id() else {
-            self.set_status("nothing is playing", StatusKind::Info);
+            self.set_status(strings::NOTHING_PLAYING, StatusKind::Info);
             return;
         };
 
         if self.select_song_by_id(current) == Selected::NotFound {
             self.set_status(
-                "now playing isn't in the current view -- clear the search to find it",
+                "now playing isn't in the current view — clear the search to find it",
                 StatusKind::Info,
             );
         }

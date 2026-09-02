@@ -1,6 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent};
 
 use crate::keymap::{ConfirmChoice, ModalKey, confirm_lookup, modal_lookup};
+use crate::strings;
 
 use lyre_core::{Mutated, SongId};
 
@@ -128,17 +129,17 @@ impl App {
                 Panel::Library => {
                     self.library_panel.search_query.clear();
                     self.sync_selection_to_rows();
-                    self.set_status("cleared search", StatusKind::Info);
+                    self.set_status(strings::CLEARED_SEARCH, StatusKind::Info);
                 }
                 Panel::Playlists if matches!(self.playlist_panel.view, PlaylistView::Viewing(_)) => {
                     self.playlist_panel.search_query.clear();
                     self.sync_selection_to_rows();
-                    self.set_status("cleared search", StatusKind::Info);
+                    self.set_status(strings::CLEARED_SEARCH, StatusKind::Info);
                 }
                 Panel::Playlists => {
                     self.playlist_panel.search_query.clear();
                     self.sync_playlist_browse_selection();
-                    self.set_status("cleared search", StatusKind::Info);
+                    self.set_status(strings::CLEARED_SEARCH, StatusKind::Info);
                 }
             },
         }
@@ -184,7 +185,7 @@ impl App {
             .library
             .get(song_id)
             .map(|s| s.to_string())
-            .unwrap_or_else(|| "song".to_string());
+            .unwrap_or_else(|| strings::UNTITLED_SONG.to_string());
         if self.playlists.remove_song(playlist_id, song_id) == Mutated::Yes {
             self.set_status(format!("removed {label}"), StatusKind::Success);
             self.sync_selection_to_rows();

@@ -1,6 +1,6 @@
 use lyre_core::MetadataEdits;
 
-use crate::ui::plural;
+use crate::strings::{self, plural};
 use super::App;
 use super::modes::Mode;
 use super::state::{
@@ -36,7 +36,7 @@ impl App {
             Some(Row::Header(heading)) => {
                 self.set_status(heading_selected_message(&heading), StatusKind::Info);
             }
-            None => self.set_status("select a song first", StatusKind::Info),
+            None => self.set_status(strings::SELECT_SONG_FIRST, StatusKind::Info),
         }
     }
 
@@ -57,7 +57,7 @@ impl App {
                     .library
                     .get(song)
                     .map(|s| s.to_string())
-                    .unwrap_or_else(|| "song".to_string());
+                    .unwrap_or_else(|| strings::UNTITLED_SONG.to_string());
                 self.set_status(format!("updated metadata for {label}"), StatusKind::Success);
                 self.select_song_by_id(song);
 
@@ -123,6 +123,10 @@ impl App {
         }
 
         let applied = updated.len();
+        if applied == 0 {
+            self.set_status("no other songs needed the romanized artist", StatusKind::Info);
+            return;
+        }
         self.set_status(
             format!(
                 "applied romanized artist to {applied} other song{}",

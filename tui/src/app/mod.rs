@@ -18,7 +18,7 @@ use ratatui::{DefaultTerminal, widgets::ListState};
 
 use lyre_core::{Library, Player, PlaylistStore, Queue, SaveOutcome, SongId};
 
-use crate::{Backend, config};
+use crate::{Backend, config, strings};
 
 pub use row_builder::{RowCache, group_label};
 pub use state::{
@@ -85,8 +85,9 @@ impl App {
 
         let status = StatusMessage::new(
             format!(
-                "loaded {} song(s) from {}",
+                "loaded {} song{} from {}",
                 library.len(),
+                strings::plural(library.len(), "s"),
                 library.root().display()
             ),
             StatusKind::Success,
@@ -248,8 +249,9 @@ impl App {
                 self.modes = Modes::new();
 
                 let mut message = format!(
-                    "loaded {} song(s) from {}",
+                    "loaded {} song{} from {}",
                     library.len(),
+                    strings::plural(library.len(), "s"),
                     library.root().display()
                 );
                 if stats.skipped() > 0 {
@@ -257,8 +259,9 @@ impl App {
                 }
                 if prune_stats.songs_removed > 0 {
                     message.push_str(&format!(
-                        ", removed {} missing song(s) from playlists",
-                        prune_stats.songs_removed
+                        ", removed {} missing song{} from playlists",
+                        prune_stats.songs_removed,
+                        strings::plural(prune_stats.songs_removed, "s")
                     ));
                 }
 
@@ -270,8 +273,9 @@ impl App {
                     .collect();
                 if !warnings.is_empty() {
                     message.push_str(&format!(
-                        ", {} warning(s) -- see the output after quitting",
-                        warnings.len()
+                        ", {} warning{} — see the output after quitting",
+                        warnings.len(),
+                        strings::plural(warnings.len(), "s")
                     ));
                     self.deferred_warnings.extend(warnings);
                 }

@@ -26,7 +26,11 @@ pub fn render(app: &App, area: Rect, buf: &mut Buffer) {
     };
 
     let line = Line::from(vec![
-        Span::raw(format!(" {APP_NAME} — {} song(s) — ", app.library.len())),
+        Span::raw(format!(
+            " {APP_NAME} — {} song{} — ",
+            app.library.len(),
+            crate::strings::plural(app.library.len(), "s")
+        )),
         Span::styled(state_label, state_style),
         Span::raw(format!(" — volume {:.0}% ", app.player.volume() * 100.0)),
     ]);

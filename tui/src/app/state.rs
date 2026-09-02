@@ -527,5 +527,5 @@ impl StatusMessage {
 }
 
 pub(super) fn heading_selected_message(heading: &str) -> String {
-    format!("\"{heading}\" is a heading -- select a song under it")
+    format!("\"{heading}\" is a heading — select a song under it")
 }

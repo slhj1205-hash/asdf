@@ -3,6 +3,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::widgets::ListState;
 
 use crate::keymap::{ModalKey, modal_lookup};
+use crate::strings;
 
 use lyre_core::{Mutated, PlaylistId, SongId};
 
@@ -64,11 +65,11 @@ impl App {
                         for &song_id in &songs {
                             self.playlists.add_song(id, song_id);
                         }
-                        let message = if songs.len() > 1 {
-                            format!("created \"{trimmed}\" and added {} songs", songs.len())
-                        } else {
-                            format!("created \"{trimmed}\" and added the song")
-                        };
+                        let message = format!(
+                            "created \"{trimmed}\" and added {} song{}",
+                            songs.len(),
+                            strings::plural(songs.len(), "s")
+                        );
                         self.set_status(message, StatusKind::Success);
                         return;
                     }
@@ -119,7 +120,7 @@ impl App {
                                 }
                                 None => {
                                     self.set_status(
-                                        "no other playlists to add to -- select Create Playlist instead",
+                                        "no other playlists to add to — select Create Playlist instead",
                                         StatusKind::Info,
                                     );
                                 }
@@ -141,7 +142,7 @@ impl App {
                                     let message = if batch.is_some() {
                                         "none of the selected songs are in a playlist"
                                     } else {
-                                        "song is not in any playlist"
+                                        "song isn't in any playlist"
                                     };
                                     self.set_status(message, StatusKind::Info);
                                 }
@@ -275,7 +276,10 @@ fn batch_message(verb: &str, prep: &str, noop: &str, done: usize, total: usize, 
     match (done, total) {
         (0, _) => format!("{noop} \"{name}\""),
         (1, 1) => format!("{verb} {prep} \"{name}\""),
-        (n, t) if n == t => format!("{verb} {n} songs {prep} \"{name}\""),
+        (n, t) if n == t => format!(
+            "{verb} {n} song{} {prep} \"{name}\"",
+            strings::plural(n, "s")
+        ),
         (n, t) => format!("{verb} {n} of {t} songs {prep} \"{name}\""),
     }
 }

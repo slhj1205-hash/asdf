@@ -23,11 +23,12 @@ pub use rows::{
     allocate_title_artist_widths, PanelHeight, SongListContext, SongListPanelOptions, label_for,
     render_centered_message, render_no_matches, render_song_list_panel, viewport,
 };
+pub use crate::strings::plural;
 pub use style::{
     centered_rect, content_style, dim_area, display_width, focus_style, format_duration,
     format_mtime, marquee_scroll_offset, marker_style, marquee_window, modal_block,
     modal_body_style, modal_error_style, modal_hint_style, modal_label_style, modal_value_style,
-    plural, search_title, side_by_side_rect, sort_title, sort_title_widths, styled_list,
+    search_title, side_by_side_rect, sort_title, sort_title_widths, styled_list,
     titled_block, titled_block_split, unfocused_style, SELECTED_MARKER,
 };
 

@@ -96,10 +96,14 @@ fn render_choose_action(
     let song = app.library.get(modal.song);
 
     let title_line = match &modal.batch {
-        Some(ids) => Line::from(format!("{} songs selected", ids.len())),
+        Some(ids) => Line::from(format!(
+            "{} song{} selected",
+            ids.len(),
+            crate::strings::plural(ids.len(), "s")
+        )),
         None => Line::from(
             song.map(|s| s.title().to_string())
-                .unwrap_or_else(|| "this song".to_string()),
+                .unwrap_or_else(|| crate::strings::UNTITLED_SONG.to_string()),
         ),
     }
     .alignment(Alignment::Center)

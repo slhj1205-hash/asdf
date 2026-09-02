@@ -2,6 +2,7 @@ use ratatui::widgets::ListState;
 
 use lyre_core::{PlaylistId, SongId};
 
+use crate::strings;
 use super::App;
 use super::modes::Mode;
 use super::state::{
@@ -52,7 +53,7 @@ impl App {
             Some(Row::Header(heading)) => {
                 self.set_status(heading_selected_message(&heading), StatusKind::Info);
             }
-            None => self.set_status("select a song first", StatusKind::Info),
+            None => self.set_status(strings::SELECT_SONG_FIRST, StatusKind::Info),
         }
     }
 
@@ -71,7 +72,7 @@ impl App {
             Some(Row::Header(heading)) => {
                 self.set_status(heading_selected_message(&heading), StatusKind::Info);
             }
-            None => self.set_status("select a song first", StatusKind::Info),
+            None => self.set_status(strings::SELECT_SONG_FIRST, StatusKind::Info),
         }
     }
 

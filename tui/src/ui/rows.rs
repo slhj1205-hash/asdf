@@ -387,7 +387,7 @@ pub fn render_song_list_panel(
 
     if match_count == 0 && is_filtering(query) {
         list_state.select(None);
-        render_centered_message(area, buf, block, &format!("No songs match \"{query}\""));
+        render_no_matches(area, buf, block, query, "songs");
         return PanelHeight(inner_height);
     }
 

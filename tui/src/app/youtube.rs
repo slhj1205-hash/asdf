@@ -366,7 +366,7 @@ impl App {
         std::thread::spawn(move || {
             let Some(binaries_dir) = crate::config::youtube_binaries_dir() else {
                 let _ = tx.send(DownloadEvent::Failed(
-                    "could not resolve a cache directory".to_string(),
+                    "failed to resolve a cache directory".to_string(),
                 ));
                 return;
             };
@@ -445,7 +445,7 @@ fn resolve_directory(root: &std::path::Path, subpath: &str) -> Result<PathBuf, S
         .components()
         .any(|c| matches!(c, std::path::Component::ParentDir))
     {
-        return Err("directory cannot contain '..'".to_string());
+        return Err("directory can't contain '..'".to_string());
     }
 
     let joined = root.join(candidate);

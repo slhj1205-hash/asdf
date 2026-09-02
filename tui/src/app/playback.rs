@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use lyre_core::{PlaylistId, Queue, SongId, player::PlayerEvent};
 
+use crate::strings;
 use super::state::{Panel, PlaylistView, QueueSource, Row, StatusKind, heading_selected_message};
 use super::{App, EventsChanged};
 
@@ -54,7 +55,7 @@ impl App {
             Some(Row::Header(heading)) => {
                 self.set_status(heading_selected_message(&heading), StatusKind::Info);
             }
-            None => self.set_status("select a song first", StatusKind::Info),
+            None => self.set_status(strings::SELECT_SONG_FIRST, StatusKind::Info),
         }
     }
 
@@ -62,7 +63,7 @@ impl App {
         let Some(id) = self.selected_playlist_id() else {
             let key = crate::keymap::display_for(crate::keymap::Action::OpenSongModal);
             self.set_status(
-                format!("no playlists yet -- press {key} on a song to create one"),
+                format!("no playlists yet — press {key} on a song to create one"),
                 StatusKind::Info,
             );
             return;
@@ -101,7 +102,7 @@ impl App {
             Some(Row::Header(heading)) => {
                 self.set_status(heading_selected_message(&heading), StatusKind::Info);
             }
-            None => self.set_status("select a song first", StatusKind::Info),
+            None => self.set_status(strings::SELECT_SONG_FIRST, StatusKind::Info),
         }
     }
 
@@ -128,7 +129,7 @@ impl App {
 
     pub(super) fn seek_current(&mut self, delta_secs: i64) {
         if self.queue.current_id().is_none() {
-            self.set_status("nothing is playing", StatusKind::Info);
+            self.set_status(strings::NOTHING_PLAYING, StatusKind::Info);
             return;
         }
 
@@ -179,13 +180,13 @@ impl App {
                     .library
                     .get(id)
                     .map(|s| s.to_string())
-                    .unwrap_or_else(|| "song".to_string());
+                    .unwrap_or_else(|| strings::UNTITLED_SONG.to_string());
                 self.set_status(format!("queued next: {label}"), StatusKind::Success);
             }
             Some(Row::Header(heading)) => {
                 self.set_status(heading_selected_message(&heading), StatusKind::Info);
             }
-            None => self.set_status("select a song first", StatusKind::Info),
+            None => self.set_status(strings::SELECT_SONG_FIRST, StatusKind::Info),
         }
     }
 }

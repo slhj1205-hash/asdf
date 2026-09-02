@@ -98,12 +98,12 @@ pub fn render_remove_confirm(
         .library
         .get(song_id)
         .map(|s| s.to_string())
-        .unwrap_or_else(|| "this song".to_string());
+        .unwrap_or_else(|| crate::strings::UNTITLED_SONG.to_string());
     let playlist_label = app
         .playlists
         .get(playlist_id)
         .map(|p| p.name().to_string())
-        .unwrap_or_else(|| "this playlist".to_string());
+        .unwrap_or_else(|| crate::strings::UNTITLED_PLAYLIST.to_string());
 
     let lines = vec![
         Line::raw(""),

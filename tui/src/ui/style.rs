@@ -12,6 +12,7 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::keymap::{self, Action, Direction};
 
+use crate::strings::plural;
 use crate::theme;
 
 pub const SELECTED_MARKER: &str = "▶ ";
@@ -114,10 +115,6 @@ pub fn styled_list<'a>(items: Vec<ListItem<'a>>, block: Block<'a>) -> List<'a> {
         .highlight_style(selected_style())
         .highlight_symbol(SELECTED_MARKER)
         .highlight_spacing(HighlightSpacing::Always)
-}
-
-pub fn plural(count: usize, suffix: &str) -> &str {
-    if count == 1 { "" } else { suffix }
 }
 
 fn max_label_width<T: Copy>(variants: &[T], label: impl Fn(T) -> &'static str) -> usize {
