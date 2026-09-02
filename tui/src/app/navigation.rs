@@ -153,21 +153,19 @@ impl App {
         }
         let query = FuzzyQuery::new(&self.playlist_panel.search_query);
 
-        let mut scored: Vec<(PlaylistId, u32, String)> = self
+        let mut scored: Vec<(PlaylistId, u32)> = self
             .playlists
             .ids_sorted_by_name()
             .iter()
             .copied()
             .filter_map(|id| {
                 let playlist = self.playlists.get(id)?;
-                playlist
-                    .fuzzy_score(&query)
-                    .map(|score| (id, score, playlist.sort_name()))
+                playlist.fuzzy_score(&query).map(|score| (id, score))
             })
             .collect();
 
-        scored.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.2.cmp(&b.2)));
-        scored.into_iter().map(|(id, _, _)| id).collect()
+        scored.sort_by_key(|&(_, score)| std::cmp::Reverse(score));
+        scored.into_iter().map(|(id, _)| id).collect()
     }
 
     pub(super) fn move_selection(&mut self, delta: isize) {

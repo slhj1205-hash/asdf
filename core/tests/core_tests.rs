@@ -876,7 +876,7 @@ fn song_sort_keys_are_lowercase() {
 }
 
 #[test]
-fn song_fuzzy_term_score_requires_every_term_to_match() {
+fn song_fuzzy_score_requires_every_term_to_match() {
     let dir = TempDir::new().unwrap();
     let path = write_song(
         dir.path(),
@@ -896,27 +896,31 @@ fn song_fuzzy_term_score_requires_every_term_to_match() {
 }
 
 #[test]
-fn song_fuzzy_term_score_expects_an_already_lowercased_term() {
+fn song_fuzzy_score_is_case_insensitive() {
     let dir = TempDir::new().unwrap();
     let path = write_song(dir.path(), "song.wav", "Neon Skyline", "Artist", "Album");
     let song = lyre_core::song::Song::load(&path).unwrap();
 
-    assert!(
-        song.fuzzy_score(&FuzzyQuery::new("neon")).is_some(),
-        "callers are expected to lowercase the query before matching"
+    let lower = song.fuzzy_score(&FuzzyQuery::new("neon"));
+    let upper = song.fuzzy_score(&FuzzyQuery::new("NEON"));
+
+    assert!(lower.is_some());
+    assert_eq!(
+        lower, upper,
+        "FuzzyQuery normalizes case, so callers need not lowercase the query"
     );
 }
 
 #[test]
-fn song_fuzzy_term_score_rewards_a_match_at_a_word_boundary() {
+fn song_fuzzy_score_rewards_a_match_at_a_word_boundary() {
     let dir = TempDir::new().unwrap();
     let boundary = write_song(dir.path(), "boundary.wav", "Blue Sky", "Artist", "Album");
     let midword = write_song(dir.path(), "midword.wav", "Ruby Sky", "Artist", "Album");
     let boundary_song = lyre_core::song::Song::load(&boundary).unwrap();
     let midword_song = lyre_core::song::Song::load(&midword).unwrap();
 
-    let boundary_score = boundary_song.fuzzy_term_score("b").unwrap();
-    let midword_score = midword_song.fuzzy_term_score("b").unwrap();
+    let boundary_score = boundary_song.fuzzy_score(&FuzzyQuery::new("b")).unwrap();
+    let midword_score = midword_song.fuzzy_score(&FuzzyQuery::new("b")).unwrap();
 
     assert!(
         boundary_score > midword_score,
@@ -925,12 +929,12 @@ fn song_fuzzy_term_score_rewards_a_match_at_a_word_boundary() {
 }
 
 #[test]
-fn song_fuzzy_term_score_of_an_empty_term_matches_everything_with_zero_score() {
+fn song_fuzzy_score_of_an_empty_query_matches_everything_with_zero_score() {
     let dir = TempDir::new().unwrap();
     let path = write_song(dir.path(), "song.wav", "Anything", "Artist", "Album");
     let song = lyre_core::song::Song::load(&path).unwrap();
 
-    assert_eq!(song.fuzzy_term_score(""), Some(0));
+    assert_eq!(song.fuzzy_score(&FuzzyQuery::new("")), Some(0));
 }
 
 #[test]

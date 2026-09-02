@@ -140,10 +140,6 @@ impl Playlist {
         Some(total)
     }
 
-    pub fn sort_name(&self) -> String {
-        self.name.chars().flat_map(char::to_lowercase).collect()
-    }
-
     pub(crate) fn retain_songs(&mut self, keep: impl Fn(SongId) -> bool) {
         self.songs.retain(|&id| keep(id));
     }

@@ -21,26 +21,14 @@ pub const SUPPORTED_EXTENSIONS: &[&str] = &[
     "mpc", "mpp", "oga", "ogg", "opus", "spx", "wav", "wave", "wv",
 ];
 
-const MAX_EXTENSION_LEN: usize = 5;
-
 pub fn is_supported_audio(path: &Path) -> bool {
-    let Some(ext) = path.extension().and_then(|e| e.to_str()) else {
-        return false;
-    };
-    if ext.is_empty() || ext.len() > MAX_EXTENSION_LEN || !ext.is_ascii() {
-        return false;
-    }
-    let mut buf = [0u8; MAX_EXTENSION_LEN];
-    let bytes = ext.as_bytes();
-    #[allow(clippy::indexing_slicing)]
-    {
-        buf[..bytes.len()].copy_from_slice(bytes);
-        buf[..bytes.len()].make_ascii_lowercase();
-        let lower = &buf[..bytes.len()];
-        SUPPORTED_EXTENSIONS
-            .iter()
-            .any(|known| known.as_bytes() == lower)
-    }
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|ext| {
+            SUPPORTED_EXTENSIONS
+                .iter()
+                .any(|known| known.eq_ignore_ascii_case(ext))
+        })
 }
 
 #[derive(
@@ -330,9 +318,6 @@ struct TermMatch {
 struct SortKeys {
     title: Box<str>,
     artist: Box<str>,
-    album: Box<str>,
-    title_sort: Option<Box<str>>,
-    artist_sort: Option<Box<str>>,
 
     fuzzy_title: Candidate,
     fuzzy_artist: Candidate,
@@ -350,11 +335,8 @@ impl SortKeys {
         artist_sort: Option<&str>,
     ) -> SortKeys {
         SortKeys {
-            title: title.chars().flat_map(char::to_lowercase).collect(),
-            artist: artist.chars().flat_map(char::to_lowercase).collect(),
-            album: album.chars().flat_map(char::to_lowercase).collect(),
-            title_sort: title_sort.map(|s| s.chars().flat_map(char::to_lowercase).collect()),
-            artist_sort: artist_sort.map(|s| s.chars().flat_map(char::to_lowercase).collect()),
+            title: title.to_lowercase().into_boxed_str(),
+            artist: artist.to_lowercase().into_boxed_str(),
 
             fuzzy_title: Candidate::new(title),
             fuzzy_artist: Candidate::new(artist),
@@ -369,15 +351,6 @@ impl SortKeys {
     }
     fn artist(&self) -> &str {
         &self.artist
-    }
-    fn album(&self) -> &str {
-        &self.album
-    }
-    fn title_sort(&self) -> Option<&str> {
-        self.title_sort.as_deref()
-    }
-    fn artist_sort(&self) -> Option<&str> {
-        self.artist_sort.as_deref()
     }
 
     fn fuzzy_fields(&self) -> [(SearchField, &Candidate); 3] {
@@ -549,15 +522,15 @@ impl Song {
             };
             total = total.saturating_add(bonus);
         }
-        if query.is_multi_term() {
-            if let Some(phrase) = self.best_field_match(query.phrase()) {
-                let bonus = match phrase.field.group() {
-                    FieldGroup::Title => PHRASE_TITLE_BONUS,
-                    FieldGroup::Artist => PHRASE_ARTIST_BONUS,
-                    FieldGroup::Album => PHRASE_ALBUM_BONUS,
-                };
-                total = total.saturating_add(bonus);
-            }
+        if query.is_multi_term()
+            && let Some(phrase) = self.best_field_match(query.phrase())
+        {
+            let bonus = match phrase.field.group() {
+                FieldGroup::Title => PHRASE_TITLE_BONUS,
+                FieldGroup::Artist => PHRASE_ARTIST_BONUS,
+                FieldGroup::Album => PHRASE_ALBUM_BONUS,
+            };
+            total = total.saturating_add(bonus);
         }
 
         Some(total)
