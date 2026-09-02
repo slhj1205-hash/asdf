@@ -151,14 +151,16 @@ impl App {
 
 fn fuzzy_filter_and_sort<'a>(
     songs: impl Iterator<Item = &'a Song>,
-    terms: &[&str],
+    query: &FuzzyQuery,
 ) -> Vec<&'a Song> {
     let mut scored: Vec<(&Song, u32)> = songs
-        .filter_map(|song| song.fuzzy_score(terms).map(|score| (song, score)))
+        .filter_map(|song| song.fuzzy_score(query).map(|score| (song, score)))
         .collect();
     scored.sort_unstable_by(|a, b| {
         b.1.cmp(&a.1)
             .then_with(|| a.0.sort_title().cmp(b.0.sort_title()))
+            .then_with(|| a.0.sort_artist().cmp(b.0.sort_artist()))
+            .then_with(|| a.0.path().cmp(b.0.path()))
     });
     scored.into_iter().map(|(song, _)| song).collect()
 }

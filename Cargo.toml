@@ -47,6 +47,7 @@ gstreamer = "0.25"
 ratatui = "0.30"
 crossterm = "0.29"
 unicode-width = "0.2"
+unicode-normalization = "0.1"
 
 [profile.release]
 opt-level = 3

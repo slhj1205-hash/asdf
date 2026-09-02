@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::fnv::FnvHasher;
-use crate::fuzzy;
+use crate::fuzzy::{self, Candidate, FuzzyQuery, Pattern};
 
 use lofty::{
     config::WriteOptions,
@@ -275,6 +275,57 @@ pub const UNKNOWN_TITLE: &str = "Unknown Title";
 pub const UNKNOWN_ARTIST: &str = "Unknown Artist";
 pub const UNKNOWN_ALBUM: &str = "Unknown Album";
 
+const TITLE_WEIGHT: u32 = 150;
+const ARTIST_WEIGHT: u32 = 100;
+const ALBUM_WEIGHT: u32 = 100;
+const WEIGHT_SCALE: u32 = 100;
+
+const SAME_FIELD_TITLE_BONUS: u32 = 120;
+const SAME_FIELD_OTHER_BONUS: u32 = 60;
+const PHRASE_TITLE_BONUS: u32 = 200;
+const PHRASE_ARTIST_BONUS: u32 = 90;
+const PHRASE_ALBUM_BONUS: u32 = 70;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SearchField {
+    Title,
+    Artist,
+    Album,
+    TitleSort,
+    ArtistSort,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FieldGroup {
+    Title,
+    Artist,
+    Album,
+}
+
+impl SearchField {
+    fn weight(self) -> u32 {
+        match self {
+            SearchField::Title | SearchField::TitleSort => TITLE_WEIGHT,
+            SearchField::Artist | SearchField::ArtistSort => ARTIST_WEIGHT,
+            SearchField::Album => ALBUM_WEIGHT,
+        }
+    }
+
+    fn group(self) -> FieldGroup {
+        match self {
+            SearchField::Title | SearchField::TitleSort => FieldGroup::Title,
+            SearchField::Artist | SearchField::ArtistSort => FieldGroup::Artist,
+            SearchField::Album => FieldGroup::Album,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct TermMatch {
+    score: u32,
+    field: SearchField,
+}
+
 #[derive(Debug)]
 struct SortKeys {
     title: Box<str>,
@@ -282,6 +333,12 @@ struct SortKeys {
     album: Box<str>,
     title_sort: Option<Box<str>>,
     artist_sort: Option<Box<str>>,
+
+    fuzzy_title: Candidate,
+    fuzzy_artist: Candidate,
+    fuzzy_album: Candidate,
+    fuzzy_title_sort: Option<Candidate>,
+    fuzzy_artist_sort: Option<Candidate>,
 }
 
 impl SortKeys {
@@ -298,6 +355,12 @@ impl SortKeys {
             album: album.chars().flat_map(char::to_lowercase).collect(),
             title_sort: title_sort.map(|s| s.chars().flat_map(char::to_lowercase).collect()),
             artist_sort: artist_sort.map(|s| s.chars().flat_map(char::to_lowercase).collect()),
+
+            fuzzy_title: Candidate::new(title),
+            fuzzy_artist: Candidate::new(artist),
+            fuzzy_album: Candidate::new(album),
+            fuzzy_title_sort: title_sort.map(Candidate::new),
+            fuzzy_artist_sort: artist_sort.map(Candidate::new),
         }
     }
 
@@ -315,6 +378,21 @@ impl SortKeys {
     }
     fn artist_sort(&self) -> Option<&str> {
         self.artist_sort.as_deref()
+    }
+
+    fn fuzzy_fields(&self) -> [(SearchField, &Candidate); 3] {
+        [
+            (SearchField::Title, &self.fuzzy_title),
+            (SearchField::Artist, &self.fuzzy_artist),
+            (SearchField::Album, &self.fuzzy_album),
+        ]
+    }
+
+    fn fuzzy_sort_fields(&self) -> [(SearchField, Option<&Candidate>); 2] {
+        [
+            (SearchField::TitleSort, self.fuzzy_title_sort.as_ref()),
+            (SearchField::ArtistSort, self.fuzzy_artist_sort.as_ref()),
+        ]
     }
 }
 
@@ -413,42 +491,75 @@ impl Song {
         self.keys.artist()
     }
 
-    #[inline]
-    pub fn fuzzy_term_score(&self, term: &str) -> Option<u32> {
-        if term.is_empty() {
-            return Some(0);
+    fn best_field_match(&self, pattern: &Pattern) -> Option<TermMatch> {
+        let mut best: Option<TermMatch> = None;
+
+        let mut consider = |field: SearchField, candidate: &Candidate| {
+            if let Some(raw) = fuzzy::score(pattern, candidate) {
+                let score = raw.saturating_mul(field.weight()) / WEIGHT_SCALE;
+                let better = match best {
+                    None => true,
+                    Some(current) => score > current.score,
+                };
+                if better {
+                    best = Some(TermMatch { score, field });
+                }
+            }
+        };
+
+        for (field, candidate) in self.keys.fuzzy_fields() {
+            consider(field, candidate);
         }
-        let title_field = self.keys.title();
-        let artist_field = self.keys.artist();
-        let album_field = self.keys.album();
+        for (field, candidate) in self.keys.fuzzy_sort_fields() {
+            if let Some(candidate) = candidate {
+                consider(field, candidate);
+            }
+        }
 
-        let title = fuzzy::subsequence_score(term, title_field)
-            .map(|s| fuzzy::normalize_by_length(s, title_field.chars().count()) * 3 / 2);
-        let artist = fuzzy::subsequence_score(term, artist_field)
-            .map(|s| fuzzy::normalize_by_length(s, artist_field.chars().count()));
-        let album = fuzzy::subsequence_score(term, album_field)
-            .map(|s| fuzzy::normalize_by_length(s, album_field.chars().count()));
-
-        let title_sort = self.keys.title_sort().and_then(|field| {
-            fuzzy::subsequence_score(term, field)
-                .map(|s| fuzzy::normalize_by_length(s, field.chars().count()) * 3 / 2)
-        });
-        let artist_sort = self.keys.artist_sort().and_then(|field| {
-            fuzzy::subsequence_score(term, field)
-                .map(|s| fuzzy::normalize_by_length(s, field.chars().count()))
-        });
-
-        [title, artist, album, title_sort, artist_sort]
-            .into_iter()
-            .flatten()
-            .max()
+        best
     }
 
-    pub fn fuzzy_score(&self, terms: &[&str]) -> Option<u32> {
-        let mut total = 0u32;
-        for term in terms {
-            total += self.fuzzy_term_score(term)?;
+    pub fn fuzzy_score(&self, query: &FuzzyQuery) -> Option<u32> {
+        if query.is_empty() {
+            return Some(0);
         }
+
+        let mut total: u32 = 0;
+        let mut group: Option<FieldGroup> = None;
+        let mut same_group = true;
+
+        for term in query.terms() {
+            let matched = self.best_field_match(term)?;
+            total = total.saturating_add(matched.score);
+
+            match group {
+                None => group = Some(matched.field.group()),
+                Some(current) => {
+                    if current != matched.field.group() {
+                        same_group = false;
+                    }
+                }
+            }
+        }
+        if query.is_multi_term() && same_group {
+            let bonus = match group {
+                Some(FieldGroup::Title) => SAME_FIELD_TITLE_BONUS,
+                Some(_) => SAME_FIELD_OTHER_BONUS,
+                None => 0,
+            };
+            total = total.saturating_add(bonus);
+        }
+        if query.is_multi_term() {
+            if let Some(phrase) = self.best_field_match(query.phrase()) {
+                let bonus = match phrase.field.group() {
+                    FieldGroup::Title => PHRASE_TITLE_BONUS,
+                    FieldGroup::Artist => PHRASE_ARTIST_BONUS,
+                    FieldGroup::Album => PHRASE_ALBUM_BONUS,
+                };
+                total = total.saturating_add(bonus);
+            }
+        }
+
         Some(total)
     }
 
