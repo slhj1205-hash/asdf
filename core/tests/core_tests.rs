@@ -992,8 +992,13 @@ fn library_insert_reports_a_collision_without_replacing_the_existing_song() {
     library.insert(first);
     let outcome = library.insert(second);
 
-    assert_eq!(outcome, InsertOutcome::Collision { existing: id });
-    assert_eq!(library.len(), 1);
+    assert_eq!(outcome, InsertOutcome::Collision);
+    assert_eq!(library.len(), 1, "the second insert must not add a new entry");
+    assert_eq!(
+        library.get(id).map(lyre_core::Song::path),
+        Some(path.as_path()),
+        "the first song must still be the one stored"
+    );
 }
 
 #[test]

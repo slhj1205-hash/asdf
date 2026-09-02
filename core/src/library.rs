@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, hash_map},
     fs,
     path::{Path, PathBuf},
 };
@@ -103,17 +103,19 @@ impl Library {
                     );
 
                     let song = Song::from_cached_with_stat(path, size, mtime, metadata);
-                    let skipped_path = song.path().to_path_buf();
-                    if let InsertOutcome::Collision { existing } = insert_into(&mut songs, song) {
-                        stats.skipped_files += 1;
-                        if let Some(kept) = songs.get(&existing)
-                            && kept.path() != skipped_path
-                        {
-                            stats.warnings.push(format!(
-                                "song id collision between {} and {} -- kept the first, skipped the second",
-                                kept.path().display(),
-                                skipped_path.display()
-                            ));
+                    match songs.entry(song.id()) {
+                        hash_map::Entry::Vacant(entry) => {
+                            entry.insert(song);
+                        }
+                        hash_map::Entry::Occupied(entry) => {
+                            stats.skipped_files += 1;
+                            if entry.get().path() != song.path() {
+                                stats.warnings.push(format!(
+                                        "song id collision between {} and {} -- kept the first, skipped the second",
+                                        entry.get().path().display(),
+                                        song.path().display()
+                                ));
+                            }
                         }
                     }
                 }
@@ -235,14 +237,21 @@ impl Library {
     }
 
     pub fn insert(&mut self, song: Song) -> InsertOutcome {
-        insert_into(&mut self.songs, song)
+        let id = song.id();
+        match self.songs.entry(id) {
+            hash_map::Entry::Occupied(_) => InsertOutcome::Collision,
+            hash_map::Entry::Vacant(entry) => {
+                entry.insert(song);
+                InsertOutcome::Inserted(id)
+            }
+        }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InsertOutcome {
     Inserted(SongId),
-    Collision { existing: SongId },
+    Collision,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -404,15 +413,6 @@ fn probe_file(path: &Path, root: &Path, cache: &ScanCache) -> Outcome {
             },
         },
     }
-}
-
-fn insert_into(songs: &mut HashMap<SongId, Song>, song: Song) -> InsertOutcome {
-    let id = song.id();
-    if songs.contains_key(&id) {
-        return InsertOutcome::Collision { existing: id };
-    }
-    songs.insert(id, song);
-    InsertOutcome::Inserted(id)
 }
 
 #[derive(Debug, thiserror::Error)]

@@ -176,7 +176,7 @@ impl App {
 
                 self.maybe_prompt_romanized_artist(id, &fields.artist_sort, "");
             }
-            InsertOutcome::Collision { .. } => {
+            InsertOutcome::Collision => {
                 self.set_status(
                     "downloaded song already exists in the library",
                     StatusKind::Info,
