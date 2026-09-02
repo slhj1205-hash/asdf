@@ -12,6 +12,7 @@ pub mod scan_cache;
 pub mod song;
 pub mod youtube;
 
+pub use fuzzy::{Candidate, FuzzyQuery, Pattern};
 pub use library::{InsertOutcome, Library, ScanStats, UpdateMetadataError};
 pub use player::{NullBackend, Player};
 pub use playlist::{Mutated, Playlist, PlaylistId, PlaylistStore, PruneStats, SaveOutcome};

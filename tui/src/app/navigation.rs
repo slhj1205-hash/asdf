@@ -1,6 +1,6 @@
 use ratatui::widgets::ListState;
 
-use lyre_core::{PlaylistId, SongId};
+use lyre_core::{FuzzyQuery, PlaylistId, SongId};
 
 use crate::keymap::{self, Action, Direction};
 
@@ -150,22 +150,23 @@ impl App {
         if !is_filtering(&self.playlist_panel.search_query) {
             return self.playlists.ids_sorted_by_name().to_vec();
         }
-        let query = self.playlist_panel.search_query.to_lowercase();
-        let terms: Vec<&str> = query.split_whitespace().collect();
+        let query = FuzzyQuery::new(&self.playlist_panel.search_query);
 
-        let mut scored: Vec<(PlaylistId, u32)> = self
+        let mut scored: Vec<(PlaylistId, u32, String)> = self
             .playlists
             .ids_sorted_by_name()
             .iter()
             .copied()
             .filter_map(|id| {
                 let playlist = self.playlists.get(id)?;
-                playlist.fuzzy_score(&terms).map(|score| (id, score))
+                playlist
+                    .fuzzy_score(&query)
+                    .map(|score| (id, score, playlist.sort_name()))
             })
             .collect();
 
-        scored.sort_by_key(|&(_, score)| std::cmp::Reverse(score));
-        scored.into_iter().map(|(id, _)| id).collect()
+        scored.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.2.cmp(&b.2)));
+        scored.into_iter().map(|(id, _, _)| id).collect()
     }
 
     pub(super) fn move_selection(&mut self, delta: isize) {

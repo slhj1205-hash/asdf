@@ -1,4 +1,3 @@
-use gstreamer::glib::Unichar;
 use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
 
 const MATCH: i32 = 16;
@@ -19,16 +18,19 @@ const LENGTH_PENALTY_CAP: i32 = -48;
 
 const UNREACHABLE: i32 = i32::MIN / 4;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Pattern {
     normalized: Box<str>,
     chars: Box<[char]>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FuzzyQuery {
     phrase: Pattern,
     terms: Box<[Pattern]>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Candidate {
     normalized: Box<str>,
     chars: Box<[char]>,
@@ -36,8 +38,11 @@ pub struct Candidate {
 }
 
 impl Pattern {
-    pub fn new(str: &str) -> Pattern {
-        let normalized = normalize(raw);
+    pub fn new(raw: &str) -> Pattern {
+        Pattern::from_normalized(normalize(raw))
+    }
+
+    fn from_normalized(normalized: String) -> Pattern {
         let chars: Box<[char]> = normalized.chars().collect();
         Pattern {
             normalized: normalized.into_boxed_str(),
@@ -95,9 +100,9 @@ impl FuzzyQuery {
 }
 
 impl Candidate {
-    pub fn new(str: &str) -> Candidate {
+    pub fn new(raw: &str) -> Candidate {
         let normalized = normalize(raw);
-        let chars: Box<[char]> = raw.chars().collect();
+        let chars: Box<[char]> = normalized.chars().collect();
         let mut boundaries = Vec::with_capacity(chars.len());
         let mut prev: Option<char> = None;
         for &ch in chars.iter() {
@@ -233,6 +238,10 @@ fn best_alignment(pattern: &Pattern, candidate: &Candidate) -> Option<i32> {
     prev.iter().copied().filter(|&v| v > UNREACHABLE).max()
 }
 
+pub fn subsequence_score(pattern: &str, target: &str) -> Option<u32> {
+    score(&Pattern::new(pattern), &Candidate::new(target))
+}
+
 fn contains_exact_word(candidate: &Candidate, pattern: &Pattern) -> bool {
     let needle = pattern.as_str();
     if needle.is_empty() {
@@ -273,7 +282,7 @@ fn length_penalty(candidate: &Candidate) -> i32 {
 
 fn normalize(raw: &str) -> String {
     let mut out = String::with_capacity(raw.len());
-    let mut pending = false;
+    let mut pending_space = false;
 
     for c in raw.nfd() {
         if is_combining_mark(c) {
@@ -297,5 +306,5 @@ fn normalize(raw: &str) -> String {
         }
     }
 
-    out
+    out.nfc().collect()
 }

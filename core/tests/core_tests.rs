@@ -11,7 +11,7 @@ use std::{path::Path, time::Duration};
 
 use fixtures::{write_song, write_untagged_song};
 use lyre_core::{
-    NullBackend, Player, fuzzy, generate_file_name,
+    FuzzyQuery, NullBackend, Player, fuzzy, generate_file_name,
     library::{InsertOutcome, Library},
     needs_romanization,
     player::{AudioBackend, PlaybackState},
@@ -887,10 +887,10 @@ fn song_fuzzy_term_score_requires_every_term_to_match() {
     );
     let song = lyre_core::song::Song::load(&path).unwrap();
 
-    assert!(song.fuzzy_score(&["neon"]).is_some());
-    assert!(song.fuzzy_score(&["neon", "prairie"]).is_some());
+    assert!(song.fuzzy_score(&FuzzyQuery::new("neon")).is_some());
+    assert!(song.fuzzy_score(&FuzzyQuery::new("neon prairie")).is_some());
     assert!(
-        song.fuzzy_score(&["neon", "zzz"]).is_none(),
+        song.fuzzy_score(&FuzzyQuery::new("neon zzz")).is_none(),
         "a term that matches nothing should fail the whole query"
     );
 }
@@ -902,7 +902,7 @@ fn song_fuzzy_term_score_expects_an_already_lowercased_term() {
     let song = lyre_core::song::Song::load(&path).unwrap();
 
     assert!(
-        song.fuzzy_score(&["neon"]).is_some(),
+        song.fuzzy_score(&FuzzyQuery::new("neon")).is_some(),
         "callers are expected to lowercase the query before matching"
     );
 }
@@ -1035,11 +1035,35 @@ fn fuzzy_subsequence_score_rewards_a_match_starting_at_a_word_boundary() {
 }
 
 #[test]
-fn fuzzy_normalize_by_length_scores_shorter_fields_higher_for_the_same_raw_score() {
-    let short = fuzzy::normalize_by_length(10, 4);
-    let long = fuzzy::normalize_by_length(10, 40);
+fn fuzzy_score_prefers_a_shorter_field_for_the_same_match() {
+    let short = fuzzy::subsequence_score("blue", "blue").unwrap_or(0);
+    let long = fuzzy::subsequence_score("blue", "blue monday").unwrap_or(0);
 
     assert!(short > long);
+}
+
+#[test]
+fn fuzzy_score_prefers_a_compact_alignment() {
+    let compact = fuzzy::subsequence_score("ab", "a---ab").unwrap_or(0);
+    let scattered = fuzzy::subsequence_score("ab", "a---b").unwrap_or(0);
+
+    assert!(compact > scattered);
+}
+
+#[test]
+fn fuzzy_score_ignores_accents_and_punctuation() {
+    assert!(fuzzy::subsequence_score("cafe", "Caf\u{e9}").is_some());
+    assert!(fuzzy::subsequence_score("beyonce", "Beyonc\u{e9}").is_some());
+    assert!(fuzzy::subsequence_score("dont", "Don\u{2019}t Stop").is_some());
+    assert!(fuzzy::subsequence_score("acdc", "AC/DC").is_some());
+}
+
+#[test]
+fn fuzzy_score_ranks_a_prefix_above_a_mid_string_match() {
+    let prefix = fuzzy::subsequence_score("blue", "blue moon").unwrap_or(0);
+    let midway = fuzzy::subsequence_score("blue", "electric blue").unwrap_or(0);
+
+    assert!(prefix > midway);
 }
 
 #[test]
@@ -1134,10 +1158,10 @@ fn song_fuzzy_score_finds_a_song_by_its_romanized_title() {
     let song = Song::load(&path).unwrap();
 
     assert!(
-        song.fuzzy_score(&["yoake"]).is_some(),
+        song.fuzzy_score(&FuzzyQuery::new("yoake")).is_some(),
         "the romanized title must be searchable"
     );
-    assert!(song.fuzzy_score(&["zzz"]).is_none());
+    assert!(song.fuzzy_score(&FuzzyQuery::new("zzz")).is_none());
 }
 
 #[test]

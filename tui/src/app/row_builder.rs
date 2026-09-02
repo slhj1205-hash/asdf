@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, path::Path};
 
-use lyre_core::{PlaylistId, Song};
+use lyre_core::{FuzzyQuery, PlaylistId, Song};
 
 use super::App;
 use super::state::{Category, Panel, PlaylistView, Row, Sort, is_filtering};
@@ -109,9 +109,8 @@ impl App {
                         out,
                     );
                 } else {
-                    let query = self.library_panel.search_query.to_lowercase();
-                    let terms: Vec<&str> = query.split_whitespace().collect();
-                    let songs = fuzzy_filter_and_sort(self.library.songs_by_path(), &terms);
+                    let query = FuzzyQuery::new(&self.library_panel.search_query);
+                    let songs = fuzzy_filter_and_sort(self.library.songs_by_path(), &query);
                     build_relevance_rows(songs, out);
                 }
             }
@@ -141,9 +140,8 @@ impl App {
                 out,
             );
         } else {
-            let query = self.playlist_panel.search_query.to_lowercase();
-            let terms: Vec<&str> = query.split_whitespace().collect();
-            let songs = fuzzy_filter_and_sort(songs_iter, &terms);
+            let query = FuzzyQuery::new(&self.playlist_panel.search_query);
+            let songs = fuzzy_filter_and_sort(songs_iter, &query);
             build_relevance_rows(songs, out);
         }
     }

@@ -129,17 +129,19 @@ impl Playlist {
         self.songs.contains(&song)
     }
 
-    pub fn fuzzy_score(&self, terms: &[&str]) -> Option<u32> {
-        let name: String = self.name.chars().flat_map(char::to_lowercase).collect();
-        let name_len = name.chars().count();
+    pub fn fuzzy_score(&self, query: &crate::fuzzy::FuzzyQuery) -> Option<u32> {
+        let name = crate::fuzzy::Candidate::new(&self.name);
 
         let mut total = 0u32;
-        for term in terms {
-            let score = crate::fuzzy::subsequence_score(term, &name)
-                .map(|s| crate::fuzzy::normalize_by_length(s, name_len))?;
-            total += score;
+        for term in query.terms() {
+            let score = crate::fuzzy::score(term, &name)?;
+            total = total.saturating_add(score);
         }
         Some(total)
+    }
+
+    pub fn sort_name(&self) -> String {
+        self.name.chars().flat_map(char::to_lowercase).collect()
     }
 
     pub(crate) fn retain_songs(&mut self, keep: impl Fn(SongId) -> bool) {
