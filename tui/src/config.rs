@@ -6,6 +6,19 @@ use lyre_core::fnv::FnvHasher;
 use crate::app::{Category, PlaylistDisplayMode, Sort};
 use crate::app_name;
 
+fn xdg_dir(variable: &str, home_fallback: &Path) -> Option<PathBuf> {
+    let dir_name = app_name::kebab_case();
+    if let Ok(xdg) = std::env::var(variable)
+        && !xdg.is_empty()
+    {
+        return Some(PathBuf::from(xdg).join(&dir_name));
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        return Some(PathBuf::from(home).join(home_fallback).join(&dir_name));
+    }
+    None
+}
+
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 struct Config {
     last_dir: Option<PathBuf>,
@@ -26,21 +39,7 @@ pub struct ViewState {
 }
 
 fn config_path() -> Option<PathBuf> {
-    let dir_name = app_name::kebab_case();
-    if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME")
-        && !xdg.is_empty()
-    {
-        return Some(PathBuf::from(xdg).join(&dir_name).join("config.json"));
-    }
-    if let Ok(home) = std::env::var("HOME") {
-        return Some(
-            PathBuf::from(home)
-                .join(".config")
-                .join(&dir_name)
-                .join("config.json"),
-        );
-    }
-    None
+    config_dir().map(|dir| dir.join("config.json"))
 }
 
 pub fn theme_path() -> Option<PathBuf> {
@@ -48,47 +47,15 @@ pub fn theme_path() -> Option<PathBuf> {
 }
 
 fn config_dir() -> Option<PathBuf> {
-    let dir_name = app_name::kebab_case();
-    if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME")
-        && !xdg.is_empty()
-    {
-        return Some(PathBuf::from(xdg).join(&dir_name));
-    }
-    if let Ok(home) = std::env::var("HOME") {
-        return Some(PathBuf::from(home).join(".config").join(&dir_name));
-    }
-    None
+    xdg_dir("XDG_CONFIG_HOME", Path::new(".config"))
 }
 
 pub fn data_dir() -> Option<PathBuf> {
-    let dir_name = app_name::kebab_case();
-    if let Ok(xdg) = std::env::var("XDG_DATA_HOME")
-        && !xdg.is_empty()
-    {
-        return Some(PathBuf::from(xdg).join(&dir_name));
-    }
-    if let Ok(home) = std::env::var("HOME") {
-        return Some(
-            PathBuf::from(home)
-                .join(".local")
-                .join("share")
-                .join(&dir_name),
-        );
-    }
-    None
+    xdg_dir("XDG_DATA_HOME", Path::new(".local/share"))
 }
 
 pub fn cache_dir() -> Option<PathBuf> {
-    let dir_name = app_name::kebab_case();
-    if let Ok(xdg) = std::env::var("XDG_CACHE_HOME")
-        && !xdg.is_empty()
-    {
-        return Some(PathBuf::from(xdg).join(&dir_name));
-    }
-    if let Ok(home) = std::env::var("HOME") {
-        return Some(PathBuf::from(home).join(".cache").join(&dir_name));
-    }
-    None
+    xdg_dir("XDG_CACHE_HOME", Path::new(".cache"))
 }
 
 pub fn youtube_binaries_dir() -> Option<PathBuf> {
