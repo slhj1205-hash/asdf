@@ -265,15 +265,10 @@ pub enum UpdateMetadataError {
 #[derive(Debug, Default, Clone)]
 pub struct ScanStats {
     pub warnings: Vec<String>,
-
     pub cache_hits: usize,
-
     pub reprobed: usize,
-
     pub skipped_files: usize,
-
     pub unreadable_dirs: usize,
-
     pub files_considered: usize,
 }
 
