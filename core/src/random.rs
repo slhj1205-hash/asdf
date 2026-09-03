@@ -12,11 +12,6 @@ fn system_entropy() -> Option<File> {
     File::open("/dev/urandom").ok()
 }
 
-#[cfg(not(unix))]
-fn system_entropy() -> Option<File> {
-    None
-}
-
 pub struct Entropy {
     file: Option<File>,
     buffer: [u8; BUFFER_BYTES],
