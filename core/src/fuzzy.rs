@@ -151,6 +151,20 @@ fn char_bonus(candidate: &Candidate, index: usize) -> i32 {
     }
 }
 
+#[inline]
+fn is_reachable(score: i32) -> bool {
+    score > UNREACHABLE
+}
+
+#[inline]
+fn matchable_columns(
+    row: usize,
+    pattern_len: usize,
+    target_len: usize,
+) -> std::ops::RangeInclusive<usize> {
+    row..=(target_len - (pattern_len - row))
+}
+
 fn best_alignment(pattern: &Pattern, candidate: &Candidate) -> Option<i32> {
     let pattern_chars = pattern.chars();
     let target_chars = candidate.chars();
@@ -164,34 +178,35 @@ fn best_alignment(pattern: &Pattern, candidate: &Candidate) -> Option<i32> {
         return None;
     }
 
-    let mut prev = vec![UNREACHABLE; target_len];
-    let mut curr = vec![UNREACHABLE; target_len];
+    let mut previous_row = vec![UNREACHABLE; target_len];
+    let mut current_row = vec![UNREACHABLE; target_len];
 
     for (row, pattern_char) in pattern_chars.iter().enumerate() {
-        let mut best_gap = UNREACHABLE;
-        let mut reachable = false;
+        let mut best_score_after_gap = UNREACHABLE;
+        let mut row_has_a_match = false;
 
-        for cell in curr.iter_mut() {
+        for cell in current_row.iter_mut() {
             *cell = UNREACHABLE;
         }
 
-        let first = row;
-        let last = target_len - (pattern_len - row);
+        let matchable = matchable_columns(row, pattern_len, target_len);
 
         for column in 0..target_len {
             if column >= 1 {
-                if best_gap > UNREACHABLE {
-                    best_gap += GAP_EXTENSION;
+                if is_reachable(best_score_after_gap) {
+                    best_score_after_gap += GAP_EXTENSION;
                 }
                 if column >= 2 {
-                    let candidate_gap = prev.get(column - 2).copied().unwrap_or(UNREACHABLE);
-                    if candidate_gap > UNREACHABLE {
-                        best_gap = best_gap.max(candidate_gap + GAP_START);
+                    let candidate_gap =
+                        previous_row.get(column - 2).copied().unwrap_or(UNREACHABLE);
+                    if is_reachable(candidate_gap) {
+                        best_score_after_gap =
+                            best_score_after_gap.max(candidate_gap + GAP_START);
                     }
                 }
             }
 
-            if column < first || column > last {
+            if !matchable.contains(&column) {
                 continue;
             }
 
@@ -203,39 +218,39 @@ fn best_alignment(pattern: &Pattern, candidate: &Candidate) -> Option<i32> {
                 continue;
             }
 
-            let base = if row == 0 {
+            let score_before_match = if row == 0 {
                 leading_gap(column)
             } else {
                 let consecutive = match column.checked_sub(1) {
-                    Some(index) => prev.get(index).copied().unwrap_or(UNREACHABLE),
+                    Some(index) => previous_row.get(index).copied().unwrap_or(UNREACHABLE),
                     None => UNREACHABLE,
                 };
-                let consecutive = if consecutive > UNREACHABLE {
+                let consecutive = if is_reachable(consecutive) {
                     consecutive + CONSECUTIVE
                 } else {
                     UNREACHABLE
                 };
-                consecutive.max(best_gap)
+                consecutive.max(best_score_after_gap)
             };
 
-            if base <= UNREACHABLE {
+            if !is_reachable(score_before_match) {
                 continue;
             }
 
-            if let Some(cell) = curr.get_mut(column) {
-                *cell = base + MATCH + char_bonus(candidate, column);
-                reachable = true;
+            if let Some(cell) = current_row.get_mut(column) {
+                *cell = score_before_match + MATCH + char_bonus(candidate, column);
+                row_has_a_match = true;
             }
         }
 
-        if !reachable {
+        if !row_has_a_match {
             return None;
         }
 
-        std::mem::swap(&mut prev, &mut curr);
+        std::mem::swap(&mut previous_row, &mut current_row);
     }
 
-    prev.iter().copied().filter(|&v| v > UNREACHABLE).max()
+    previous_row.iter().copied().filter(|&v| is_reachable(v)).max()
 }
 
 pub fn subsequence_score(pattern: &str, target: &str) -> Option<u32> {
