@@ -623,7 +623,7 @@ fn lowercase_p_cycles_sort_and_shows_a_status_message() {
 }
 
 #[test]
-fn shift_e_opens_the_metadata_modal_prefilled_with_the_selected_songs_tags() {
+fn e_opens_the_metadata_modal_prefilled_with_the_selected_songs_tags() {
     let mut h = harness();
     h.app.on_key(key('g'));
     let Some(Row::Song(id, _)) = h.app.selected_row() else {
@@ -631,12 +631,12 @@ fn shift_e_opens_the_metadata_modal_prefilled_with_the_selected_songs_tags() {
     };
     let expected_title = h.app.library.get(id).unwrap().title().to_string();
 
-    h.app.on_key(special(KeyCode::Char('E')));
+    h.app.on_key(key('e'));
 
     let modal = h
         .app
         .metadata_mode()
-        .expect("Shift+E must open the metadata edit modal");
+        .expect("e must open the metadata edit modal");
     assert_eq!(modal.song, id);
     assert_eq!(modal.edits.title, expected_title);
     assert_eq!(modal.focused, MetadataField::Title);
@@ -647,7 +647,7 @@ fn shift_e_opens_the_metadata_modal_prefilled_with_the_selected_songs_tags() {
 fn metadata_modal_tab_and_shift_tab_cycle_through_every_field_and_wrap() {
     let mut h = harness();
     h.app.on_key(key('g'));
-    h.app.on_key(special(KeyCode::Char('E')));
+    h.app.on_key(key('e'));
 
     let visible = MetadataField::visible(&h.app.metadata_mode().unwrap().edits);
     for expected in &visible {
@@ -1059,7 +1059,7 @@ fn metadata_modal_esc_cancels_without_changing_the_library() {
     };
     let before = h.app.library.get(id).unwrap().title().to_string();
 
-    h.app.on_key(special(KeyCode::Char('E')));
+    h.app.on_key(key('e'));
     h.app.on_key(key('x'));
     h.app.on_key(special(KeyCode::Esc));
 
@@ -1075,7 +1075,7 @@ fn metadata_modal_editing_the_title_and_saving_updates_the_library() {
         panic!("expected a song row")
     };
 
-    h.app.on_key(special(KeyCode::Char('E')));
+    h.app.on_key(key('e'));
     for _ in 0..32 {
         h.app.on_key(special(KeyCode::Backspace));
     }
@@ -1114,7 +1114,7 @@ fn metadata_modal_saving_a_non_numeric_track_keeps_the_modal_open_with_an_error(
         panic!("expected a song row")
     };
 
-    h.app.on_key(special(KeyCode::Char('E')));
+    h.app.on_key(key('e'));
     let edits = h.app.metadata_mode().unwrap().edits.clone();
     for _ in 0..MetadataField::visible(&edits)
         .iter()
@@ -1158,7 +1158,7 @@ fn metadata_modal_save_carries_the_now_playing_song_to_its_new_id() {
         "sanity check: the song is now playing"
     );
 
-    h.app.on_key(special(KeyCode::Char('E')));
+    h.app.on_key(key('e'));
     for _ in 0..32 {
         h.app.on_key(special(KeyCode::Backspace));
     }
@@ -2116,7 +2116,7 @@ fn metadata_field_visible_shows_title_sort_only_when_the_title_needs_romanizatio
 fn metadata_modal_typing_a_non_ascii_title_reveals_the_title_sort_field_in_the_tab_order() {
     let mut h = harness();
     h.app.on_key(key('g'));
-    h.app.on_key(special(KeyCode::Char('E')));
+    h.app.on_key(key('e'));
 
     for c in "夜明け".chars() {
         h.app.on_key(key(c));
@@ -2136,7 +2136,7 @@ fn metadata_modal_typing_a_non_ascii_title_reveals_the_title_sort_field_in_the_t
 }
 
 fn open_metadata_modal_for_selected_song(h: &mut Harness) {
-    h.app.on_key(special(KeyCode::Char('E')));
+    h.app.on_key(key('e'));
 }
 
 #[test]
@@ -2595,7 +2595,7 @@ fn editing_metadata_keeps_the_song_in_the_queue_at_the_same_position() {
 
     let queue_before = h.app.queue.upcoming(100);
 
-    h.app.on_key(special(KeyCode::Char('E')));
+    h.app.on_key(key('e'));
     for _ in 0..32 {
         h.app.on_key(special(KeyCode::Backspace));
     }
@@ -3019,7 +3019,7 @@ fn playlists_browse_with_whitespace_query_renders_the_playlist_list_not_no_match
 fn control_modified_arrow_does_not_move_the_metadata_modal_field_cursor() {
     let mut h = harness();
     h.app.on_key(key('g'));
-    h.app.on_key(special(KeyCode::Char('E')));
+    h.app.on_key(key('e'));
     assert_eq!(
         h.app.metadata_mode().unwrap().focused,
         MetadataField::Title,
@@ -3685,7 +3685,7 @@ fn the_confirm_dialog_draws_the_same_key_it_actually_accepts() {
 fn typing_y_and_n_into_a_metadata_field_still_inserts_characters() {
     let mut h = harness();
     h.app.on_key(key('g'));
-    h.app.on_key(key('E'));
+    h.app.on_key(key('e'));
     assert!(h.app.metadata_mode_is(), "the metadata modal is open");
 
     let before = MetadataField::Title
