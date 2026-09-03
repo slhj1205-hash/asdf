@@ -3,7 +3,7 @@ use std::{cmp::Ordering, path::Path};
 use lyre_core::{FuzzyQuery, Song, SongId};
 
 use super::App;
-use super::state::{Category, Panel, PlaylistView, Row, Sort, is_filtering};
+use super::state::{Category, INDENT_UNIT, Panel, PlaylistView, Row, Sort, is_filtering};
 
 #[derive(Default)]
 pub struct RowCache {
@@ -260,10 +260,7 @@ fn build_rows(
 
                 for (depth, comp) in comps.iter().enumerate().skip(shared_depth) {
                     let name = comp.as_os_str().to_string_lossy().into_owned();
-                    let mut header = String::with_capacity(depth * 2 + name.len());
-                    for _ in 0..depth {
-                        header.push_str("  ");
-                    }
+                    let mut header = INDENT_UNIT.repeat(depth);
                     header.push_str(&name);
                     rows.push(Row::Header(header));
                     last_dirs.push(name);

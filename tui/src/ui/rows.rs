@@ -8,7 +8,7 @@ use ratatui::{
 };
 
 use crate::{
-    app::{PlaylistDisplayMode, Row, is_filtering, song_row_count},
+    app::{INDENT_UNIT, PlaylistDisplayMode, Row, is_filtering, song_row_count},
     theme,
 };
 
@@ -17,7 +17,6 @@ use super::{
     titled_block_split, unfocused_style, SELECTED_MARKER,
 };
 
-const INDENT_UNIT: &str = "  ";
 const NOW_PLAYING_MARKER: &str = "♪ ";
 
 const TITLE_WIDTH_RATIO: usize = 70;

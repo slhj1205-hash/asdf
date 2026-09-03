@@ -26,7 +26,7 @@ pub use state::{
     MeasuredLayout, MetadataEditModal, MetadataField, Panel, PlaylistDisplayMode,
     PlaylistPanelState, PlaylistView, QueueSource, RomanizedArtistConfirmModal, Row, PlaylistPicker,
     SongModal, Sort, StatusKind, StatusMessage, VisualSelection, YoutubeField, YoutubeFieldsModal,
-    YoutubeModal, is_filtering, song_row_count,
+    YoutubeModal, INDENT_UNIT, is_filtering, song_row_count,
 };
 pub use form::{FormFieldOutcome, FormFields, FormState, handle_form_field_key};
 pub use modes::{Mode, Modes};

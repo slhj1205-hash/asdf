@@ -12,7 +12,7 @@ use ratatui::{buffer::Buffer, layout::Rect, style::{Color, Style}, widgets::Widg
 use lyre_tui::{
     Backend,
     app::{
-        App, Category, ChooseActionField, FormFields, MetadataField, Panel,
+        App, Category, ChooseActionField, FormFields, INDENT_UNIT, MetadataField, Panel,
         PlaylistDisplayMode, PlaylistView, Row, PlaylistPicker, SongModal, Sort,
     },
     config,
@@ -408,6 +408,34 @@ fn path_grouping_pins_the_deepest_directory_of_a_nested_group() {
     assert!(
         !text.contains("./Deep/Nested"),
         "the pin must match the last real header row, not a breadcrumb:\\n{text}"
+    );
+}
+
+#[test]
+fn the_header_indent_and_the_song_depth_use_the_same_unit() {
+    let mut h = harness_one_large_nested_group();
+    h.app.library_panel.category = Category::Path;
+
+    let rows = h.app.visible_rows().to_vec();
+    let headers: Vec<&str> = rows
+        .iter()
+        .filter_map(|r| match r {
+            Row::Header(text) => Some(text.as_str()),
+            Row::Song(_, _) => None,
+        })
+        .collect();
+    assert_eq!(headers, vec!["Deep", &format!("{INDENT_UNIT}Nested")]);
+
+    let depths: Vec<usize> = rows
+        .iter()
+        .filter_map(|r| match r {
+            Row::Song(_, depth) => Some(*depth),
+            Row::Header(_) => None,
+        })
+        .collect();
+    assert!(
+        depths.iter().all(|&depth| depth == headers.len()),
+        "a song must sit one unit deeper than its last header"
     );
 }
 

@@ -177,6 +177,8 @@ pub enum Row {
     Song(SongId, usize),
 }
 
+pub const INDENT_UNIT: &str = "  ";
+
 pub fn song_row_count(rows: &[Row]) -> usize {
     rows.iter().filter(|r| matches!(r, Row::Song(_, _))).count()
 }
