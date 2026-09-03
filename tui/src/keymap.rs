@@ -298,7 +298,7 @@ pub const BINDINGS: &[Binding] = &[
         dispatch: true,
     },
     Binding {
-        keys: &[(KeyCode::Char('E'), NONE)],
+        keys: &[(KeyCode::Char('e'), NONE)],
         action: Some(Action::OpenMetadataEditModal),
         display_override: None,
         desc: "Edit song metadata (title/artist/album/genre/track/date)",
