@@ -273,7 +273,7 @@ fn build_rows(
 }
 
 impl RowCache {
-    pub fn rows_unchecked(&self) -> &[Row] {
+    pub fn cached_rows(&self) -> &[Row] {
         &self.rows
     }
 }

@@ -10,6 +10,7 @@ use ratatui::{
 };
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
+use crate::app::{Category, Cycleable, Sort};
 use crate::keymap::{self, Action, Direction};
 
 use crate::strings::plural;
@@ -132,8 +133,8 @@ pub struct SortTitleWidths {
 
 pub fn sort_title_widths() -> SortTitleWidths {
     SortTitleWidths {
-        category_value: max_label_width(crate::app::Category::ALL, |c| c.label()),
-        sort_value: max_label_width(crate::app::Sort::ALL, |s| s.label()),
+        category_value: max_label_width(<Category as Cycleable>::ALL, Category::label),
+        sort_value: max_label_width(<Sort as Cycleable>::ALL, Sort::label),
     }
 }
 

@@ -392,20 +392,15 @@ impl Song {
         ))
     }
 
-    pub fn from_cached_with_stat(
-        path: PathBuf,
-        _len: u64,
-        modified_secs: u64,
-        metadata: Metadata,
-    ) -> Song {
+    pub fn from_cached(path: PathBuf, modified_secs: u64, metadata: Metadata) -> Song {
         let id = SongId::compute(&path);
         Song::assemble(id, Arc::from(path), metadata, modified_secs)
     }
 
     fn assemble(id: SongId, path: Arc<Path>, metadata: Metadata, mtime_secs: u64) -> Song {
-        let title = metadata.title.as_deref().unwrap_or_else(|| stem_of(&path));
-        let artist = metadata.artist.as_deref().unwrap_or(UNKNOWN_ARTIST);
-        let album = metadata.album.as_deref().unwrap_or(UNKNOWN_ALBUM);
+        let title = title_of(&metadata, &path);
+        let artist = artist_of(&metadata);
+        let album = album_of(&metadata);
         let keys = Arc::new(SortKeys::build(
             title,
             artist,
@@ -442,16 +437,13 @@ impl Song {
     }
 
     pub fn title(&self) -> &str {
-        self.metadata
-            .title
-            .as_deref()
-            .unwrap_or_else(|| stem_of(&self.path))
+        title_of(&self.metadata, &self.path)
     }
     pub fn artist(&self) -> &str {
-        self.metadata.artist.as_deref().unwrap_or(UNKNOWN_ARTIST)
+        artist_of(&self.metadata)
     }
     pub fn album(&self) -> &str {
-        self.metadata.album.as_deref().unwrap_or(UNKNOWN_ALBUM)
+        album_of(&self.metadata)
     }
 
     #[inline]
@@ -548,6 +540,18 @@ pub(crate) fn mtime_secs(meta: &fs::Metadata) -> u64 {
         .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
         .map(|d| d.as_secs())
         .unwrap_or(0)
+}
+
+fn title_of<'a>(metadata: &'a Metadata, path: &'a Path) -> &'a str {
+    metadata.title.as_deref().unwrap_or_else(|| stem_of(path))
+}
+
+fn artist_of(metadata: &Metadata) -> &str {
+    metadata.artist.as_deref().unwrap_or(UNKNOWN_ARTIST)
+}
+
+fn album_of(metadata: &Metadata) -> &str {
+    metadata.album.as_deref().unwrap_or(UNKNOWN_ALBUM)
 }
 
 fn stem_of(path: &Path) -> &str {

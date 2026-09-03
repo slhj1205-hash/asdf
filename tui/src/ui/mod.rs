@@ -20,8 +20,9 @@ use crate::app::{App, Mode, Panel};
 use crate::keymap;
 
 pub use rows::{
-    allocate_title_artist_widths, PanelHeight, SongListContext, SongListPanelOptions, label_for,
-    render_centered_message, render_no_matches, render_song_list_panel, viewport,
+    allocate_title_artist_widths, PanelHeight, SongListContext, SongListPanelOptions,
+    SongPanelInputs, label_for, render_centered_message, render_no_matches, render_song_list_panel,
+    render_song_panel, viewport,
 };
 pub use crate::strings::plural;
 pub use style::{

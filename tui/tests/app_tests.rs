@@ -12,7 +12,7 @@ use ratatui::{buffer::Buffer, layout::Rect, style::{Color, Style}, widgets::Widg
 use lyre_tui::{
     Backend,
     app::{
-        App, Category, ChooseActionField, FormFields, INDENT_UNIT, MetadataField, Panel,
+        App, Category, ChooseActionField, Cycleable, FormFields, INDENT_UNIT, MetadataField, Panel,
         PlaylistDisplayMode, PlaylistView, Row, PlaylistPicker, SongModal, Sort,
     },
     config,
@@ -662,6 +662,65 @@ fn lowercase_p_cycles_sort_and_shows_a_status_message() {
 
     assert_ne!(before, after, "sort must have changed the order");
     assert!(h.app.status.text.contains("sorted by"));
+}
+
+#[test]
+fn cycling_a_category_forwards_then_backwards_returns_to_the_start() {
+    let mut h = harness();
+    let start = h.app.library_panel.category;
+
+    h.app.on_key(key('o'));
+    assert_ne!(h.app.library_panel.category, start);
+
+    h.app.on_key(key('O'));
+    assert_eq!(h.app.library_panel.category, start);
+}
+
+#[test]
+fn cycling_a_sort_key_forwards_then_backwards_returns_to_the_start() {
+    let mut h = harness();
+    let start = h.app.library_panel.sort;
+
+    h.app.on_key(key('p'));
+    assert_ne!(h.app.library_panel.sort, start);
+
+    h.app.on_key(key('P'));
+    assert_eq!(h.app.library_panel.sort, start);
+}
+
+#[test]
+fn cycling_changes_only_the_panel_that_has_focus() {
+    let mut h = harness();
+    let id = h.app.playlists.create("Mix");
+    h.app.panel = Panel::Playlists;
+    h.app.playlist_panel.view = PlaylistView::Viewing(id);
+
+    h.app.on_key(key('o'));
+    h.app.on_key(key('p'));
+
+    assert_ne!(h.app.playlist_panel.category, Category::default());
+    assert_ne!(h.app.playlist_panel.sort, Sort::default());
+    assert_eq!(h.app.library_panel.category, Category::default());
+    assert_eq!(h.app.library_panel.sort, Sort::default());
+}
+
+#[test]
+fn cycling_does_nothing_while_browsing_the_playlist_list() {
+    let mut h = harness();
+    h.app.playlists.create("Mix");
+    h.app.panel = Panel::Playlists;
+    h.app.playlist_panel.view = PlaylistView::Browsing;
+
+    h.app.on_key(key('o'));
+    h.app.on_key(key('p'));
+
+    assert_eq!(h.app.playlist_panel.category, Category::default());
+    assert_eq!(h.app.playlist_panel.sort, Sort::default());
+    assert!(
+        !h.app.status.text.contains("grouped by") && !h.app.status.text.contains("sorted by"),
+        "browse mode has no sort key to cycle, so it must report nothing: {}",
+        h.app.status.text
+    );
 }
 
 #[test]

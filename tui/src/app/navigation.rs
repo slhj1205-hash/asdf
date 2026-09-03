@@ -7,8 +7,8 @@ use crate::strings;
 
 use super::App;
 use super::state::{
-    Category, Panel, PlaylistView, QueueSource, Row, Sort, StatusKind, VisualSelection,
-    is_filtering,
+    Category, Cycleable, Panel, PlaylistView, QueueSource, Row, Sort, StatusKind, VisualSelection,
+    heading_selected_message, is_filtering,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -270,8 +270,22 @@ impl App {
         self.visible_rows().get(i).cloned()
     }
 
+    pub(super) fn selected_song_or_warn(&mut self) -> Option<SongId> {
+        match self.selected_row() {
+            Some(Row::Song(id, _)) => Some(id),
+            Some(Row::Header(heading)) => {
+                self.set_status(heading_selected_message(&heading), StatusKind::Info);
+                None
+            }
+            None => {
+                self.set_status(strings::SELECT_SONG_FIRST, StatusKind::Info);
+                None
+            }
+        }
+    }
+
     fn rows_slice(&self) -> &[Row] {
-        self.rows.rows_unchecked()
+        self.rows.cached_rows()
     }
 
     pub(super) fn selected_playlist_id(&self) -> Option<PlaylistId> {
@@ -351,73 +365,43 @@ impl App {
         self.active_list_state_mut().select(Some(landing));
     }
 
-    pub(super) fn cycle_category(&mut self, direction: Direction) {
-        self.cancel_visual_select();
-        match self.panel {
-            Panel::Library => self.cycle_field(
-                direction,
-                "grouped by",
-                |app| &mut app.library_panel.category,
-                Category::next,
-                Category::prev,
-                |c: Category| c.label(),
-            ),
-            Panel::Playlists if matches!(self.playlist_panel.view, PlaylistView::Viewing(_)) => {
-                self.cycle_field(
-                    direction,
-                    "grouped by",
-                    |app| &mut app.playlist_panel.category,
-                    Category::next,
-                    Category::prev,
-                    |c: Category| c.label(),
-                )
-            }
-            Panel::Playlists => {}
-        }
-    }
-
-    pub(super) fn cycle_sort(&mut self, direction: Direction) {
-        self.cancel_visual_select();
-        match self.panel {
-            Panel::Library => self.cycle_field(
-                direction,
-                "sorted by",
-                |app| &mut app.library_panel.sort,
-                Sort::next,
-                Sort::prev,
-                |c: Sort| c.label(),
-            ),
-            Panel::Playlists if matches!(self.playlist_panel.view, PlaylistView::Viewing(_)) => {
-                self.cycle_field(
-                    direction,
-                    "sorted by",
-                    |app| &mut app.playlist_panel.sort,
-                    Sort::next,
-                    Sort::prev,
-                    |c: Sort| c.label(),
-                )
-            }
-            Panel::Playlists => {}
-        }
-    }
-
-    fn cycle_field<T: Copy>(
+    pub(super) fn cycle_active_field<T: Cycleable>(
         &mut self,
         direction: Direction,
-        verb: &str,
-        field: impl FnOnce(&mut Self) -> &mut T,
-        next: impl FnOnce(T) -> T,
-        prev: impl FnOnce(T) -> T,
-        label: impl FnOnce(T) -> &'static str,
+        field: impl FnOnce(&mut Self) -> Option<&mut T>,
     ) {
-        let slot = field(self);
-        *slot = match direction {
-            Direction::Forwards => next(*slot),
-            Direction::Backwards => prev(*slot),
+        self.cancel_visual_select();
+        let Some(slot) = field(self) else {
+            return;
         };
+        let delta = match direction {
+            Direction::Forwards => 1,
+            Direction::Backwards => -1,
+        };
+        *slot = slot.step(delta);
         let updated = *slot;
         self.sync_selection_to_rows();
-        self.set_status(format!("{verb} {}", label(updated)), StatusKind::Info);
+        self.set_status(format!("{} {}", T::VERB, updated.label()), StatusKind::Info);
+    }
+
+    pub(super) fn active_category_mut(&mut self) -> Option<&mut Category> {
+        match self.panel {
+            Panel::Library => Some(&mut self.library_panel.category),
+            Panel::Playlists => match self.playlist_panel.view {
+                PlaylistView::Viewing(_) => Some(&mut self.playlist_panel.category),
+                PlaylistView::Browsing => None,
+            },
+        }
+    }
+
+    pub(super) fn active_sort_mut(&mut self) -> Option<&mut Sort> {
+        match self.panel {
+            Panel::Library => Some(&mut self.library_panel.sort),
+            Panel::Playlists => match self.playlist_panel.view {
+                PlaylistView::Viewing(_) => Some(&mut self.playlist_panel.sort),
+                PlaylistView::Browsing => None,
+            },
+        }
     }
 
     pub(super) fn cycle_library_playlist_mode(&mut self) {
@@ -471,9 +455,8 @@ pub(super) fn move_wrapping(state: &mut ListState, len: usize, delta: isize) {
     if len == 0 {
         return;
     }
-    let start = state.selected().unwrap_or(0) as isize;
-    let idx = (start + delta).rem_euclid(len as isize);
-    state.select(Some(idx as usize));
+    let start = state.selected().unwrap_or(0);
+    state.select(Some(wrapping_selectable_index(start, delta, len, |_| true)));
 }
 
 fn compute_jump(

@@ -13,9 +13,9 @@ use crate::{
 };
 
 use super::{
-    Mode, PanelHeight, SongListContext, SongListPanelOptions, focus_style, label_for, plural,
-    render_no_matches, render_song_list_panel, search_title, styled_list, titled_block,
-    titled_block_split, unfocused_style, viewport,
+    Mode, PanelHeight, SongListContext, SongPanelInputs, focus_style, plural, render_no_matches,
+    render_song_panel, search_title, styled_list, titled_block, titled_block_split,
+    unfocused_style, viewport,
 };
 
 fn playlist_name_style() -> Style {
@@ -110,49 +110,30 @@ fn render_viewing(app: &mut App, id: PlaylistId, area: Rect, buf: &mut Buffer) {
         .get(id)
         .map(|p| p.name().to_string())
         .unwrap_or_else(|| "<deleted>".to_string());
-    app.visible_rows();
-    let rows = app.rows.rows_unchecked();
     let current = app.queue.current_id();
+    let visual_range = app.visual_row_range();
 
-    let category = app.playlist_panel.category;
-    let sort = app.playlist_panel.sort;
-    let filtering = is_filtering(&app.playlist_panel.search_query);
-    let root = app.library.root();
+    app.visible_rows();
+    let rows = app.rows.cached_rows();
 
-    let group_label_fn = |song: &lyre_core::Song| -> Option<String> {
-        if filtering {
-            None
-        } else {
-            crate::app::group_label(song, category, root)
-        }
-    };
-
-    let opts = SongListPanelOptions {
-        visual_range: app.visual_row_range(),
-        title_prefix: &name,
-        category_label: app.playlist_panel.category.label(),
-        sort_label: app.playlist_panel.sort.label(),
-        search_mode_open: matches!(app.modes.active(), Some(Mode::SearchPlaylists)),
-        query: &app.playlist_panel.search_query,
-        group_label: Some(&group_label_fn),
-    };
-    let PanelHeight(height) = render_song_list_panel(
+    let PanelHeight(height) = render_song_panel(
         area,
         buf,
         &mut app.playlist_panel.list_state,
         rows,
-        opts,
         SongListContext {
             current,
             library: &app.library,
             playlist_info: None,
         },
-        |song| {
-            if filtering {
-                label_for(song, None, sort)
-            } else {
-                label_for(song, Some(category), sort)
-            }
+        SongPanelInputs {
+            title_prefix: &name,
+            category: app.playlist_panel.category,
+            sort: app.playlist_panel.sort,
+            query: &app.playlist_panel.search_query,
+            search_mode_open: matches!(app.modes.active(), Some(Mode::SearchPlaylists)),
+            visual_range,
+            root: app.library.root(),
         },
     );
     app.measured.playlist_page_height = height;

@@ -2,13 +2,9 @@ use ratatui::widgets::ListState;
 
 use lyre_core::{PlaylistId, SongId};
 
-use crate::strings;
 use super::App;
 use super::modes::Mode;
-use super::state::{
-    ChooseActionField, Panel, PlaylistView, Row, PlaylistPicker, SongModal, StatusKind,
-    heading_selected_message,
-};
+use super::state::{ChooseActionField, Panel, PlaylistView, PlaylistPicker, SongModal};
 
 impl App {
     pub(super) fn set_song_modal(
@@ -46,15 +42,10 @@ impl App {
             }
         }
 
-        match self.selected_row() {
-            Some(Row::Song(id, _)) => {
-                self.set_song_modal(id, None, selected, String::new(), None);
-            }
-            Some(Row::Header(heading)) => {
-                self.set_status(heading_selected_message(&heading), StatusKind::Info);
-            }
-            None => self.set_status(strings::SELECT_SONG_FIRST, StatusKind::Info),
-        }
+        let Some(id) = self.selected_song_or_warn() else {
+            return;
+        };
+        self.set_song_modal(id, None, selected, String::new(), None);
     }
 
     pub(super) fn open_remove_confirm(&mut self) {
@@ -65,15 +56,10 @@ impl App {
             return;
         };
 
-        match self.selected_row() {
-            Some(Row::Song(song_id, _)) => {
-                self.modes.open(Mode::ConfirmRemove(playlist_id, song_id));
-            }
-            Some(Row::Header(heading)) => {
-                self.set_status(heading_selected_message(&heading), StatusKind::Info);
-            }
-            None => self.set_status(strings::SELECT_SONG_FIRST, StatusKind::Info),
-        }
+        let Some(song_id) = self.selected_song_or_warn() else {
+            return;
+        };
+        self.modes.open(Mode::ConfirmRemove(playlist_id, song_id));
     }
 
     pub fn open_remove_confirm_for_test(&mut self, playlist_id: PlaylistId, song_id: SongId) {

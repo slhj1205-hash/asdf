@@ -5,7 +5,7 @@ use std::time::Duration;
 use lyre_core::{PlaylistId, Queue, SongId, player::PlayerEvent};
 
 use crate::strings;
-use super::state::{Panel, PlaylistView, QueueSource, Row, StatusKind, heading_selected_message};
+use super::state::{Panel, PlaylistView, QueueSource, Row, StatusKind};
 use super::{App, EventsChanged};
 
 pub(super) const SEEK_STEP_SECS: i64 = 5;
@@ -42,21 +42,18 @@ impl App {
     }
 
     pub(super) fn play_selected_library(&mut self) {
-        match self.selected_row() {
-            Some(Row::Song(id, _)) => {
-                let ids = self.queue_order();
-                if self.queue_source != QueueSource::Library || !self.queue.has_base(&ids) {
-                    self.queue = Queue::new(ids);
-                    self.queue_source = QueueSource::Library;
-                }
-                if let Some(played) = self.queue.play_id(id) {
-                    self.play_current(played);
-                }
-            }
-            Some(Row::Header(heading)) => {
-                self.set_status(heading_selected_message(&heading), StatusKind::Info);
-            }
-            None => self.set_status(strings::SELECT_SONG_FIRST, StatusKind::Info),
+        let Some(id) = self.selected_song_or_warn() else {
+            return;
+        };
+
+        let ids = self.queue_order();
+        if self.queue_source != QueueSource::Library || !self.queue.has_base(&ids) {
+            self.queue = Queue::new(ids);
+            self.queue_source = QueueSource::Library;
+        }
+
+        if let Some(played) = self.queue.play_id(id) {
+            self.play_current(played);
         }
     }
 
@@ -89,21 +86,18 @@ impl App {
         if self.playlists.get(id).is_none() {
             return;
         }
-        match self.selected_row() {
-            Some(Row::Song(song_id, _)) => {
-                let ids = self.queue_order();
-                if self.queue_source != QueueSource::Playlist(id) || !self.queue.has_base(&ids) {
-                    self.queue = Queue::new(ids);
-                    self.queue_source = QueueSource::Playlist(id);
-                }
-                if let Some(played) = self.queue.play_id(song_id) {
-                    self.play_current(played);
-                }
-            }
-            Some(Row::Header(heading)) => {
-                self.set_status(heading_selected_message(&heading), StatusKind::Info);
-            }
-            None => self.set_status(strings::SELECT_SONG_FIRST, StatusKind::Info),
+        let Some(song_id) = self.selected_song_or_warn() else {
+            return;
+        };
+
+        let ids = self.queue_order();
+        if self.queue_source != QueueSource::Playlist(id) || !self.queue.has_base(&ids) {
+            self.queue = Queue::new(ids);
+            self.queue_source = QueueSource::Playlist(id);
+        }
+
+        if let Some(played) = self.queue.play_id(song_id) {
+            self.play_current(played);
         }
     }
 
@@ -174,21 +168,17 @@ impl App {
     }
 
     pub(super) fn queue_selected_next(&mut self) {
-        match self.selected_row() {
-            Some(Row::Song(id, _)) => {
-                self.queue.queue_next(id);
-                let label = self
-                    .library
-                    .get(id)
-                    .map(|s| s.to_string())
-                    .unwrap_or_else(|| strings::UNTITLED_SONG.to_string());
-                self.set_status(format!("queued next: {label}"), StatusKind::Success);
-            }
-            Some(Row::Header(heading)) => {
-                self.set_status(heading_selected_message(&heading), StatusKind::Info);
-            }
-            None => self.set_status(strings::SELECT_SONG_FIRST, StatusKind::Info),
-        }
+        let Some(id) = self.selected_song_or_warn() else {
+            return;
+        };
+
+        self.queue.queue_next(id);
+        let label = self
+            .library
+            .get(id)
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| strings::UNTITLED_SONG.to_string());
+        self.set_status(format!("queued next: {label}"), StatusKind::Success);
     }
 }
 

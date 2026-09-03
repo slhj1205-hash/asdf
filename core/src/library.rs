@@ -77,15 +77,9 @@ impl Library {
     }
 
     pub fn songs_by_path(&self) -> impl Iterator<Item = &Song> + '_ {
-        let mut pairs: Vec<(&Path, SongId)> = self
-            .songs
-            .values()
-            .map(|song| (song.path(), song.id()))
-            .collect();
-        pairs.sort_unstable();
-        pairs
+        self.ids_by_path()
             .into_iter()
-            .filter_map(move |(_, id)| self.songs.get(&id))
+            .filter_map(move |id| self.songs.get(&id))
     }
 
     pub fn ids(&self) -> impl Iterator<Item = SongId> + '_ {
@@ -110,11 +104,16 @@ impl Library {
         Ok(())
     }
 
-    pub fn count_matching_artist(&self, artist_sort_key: &str, exclude: SongId) -> usize {
+    fn ids_with_artist_key(&self, artist_sort_key: &str, exclude: SongId) -> Vec<SongId> {
         self.songs
             .values()
             .filter(|s| s.id() != exclude && s.sort_artist() == artist_sort_key)
-            .count()
+            .map(Song::id)
+            .collect()
+    }
+
+    pub fn count_matching_artist(&self, artist_sort_key: &str, exclude: SongId) -> usize {
+        self.ids_with_artist_key(artist_sort_key, exclude).len()
     }
 
     pub fn update_artist_sort_for_matching(
@@ -123,12 +122,7 @@ impl Library {
         artist_sort_value: &str,
         exclude: SongId,
     ) -> Vec<SongId> {
-        let matching: Vec<SongId> = self
-            .songs
-            .values()
-            .filter(|s| s.id() != exclude && s.sort_artist() == artist_sort_key)
-            .map(Song::id)
-            .collect();
+        let matching = self.ids_with_artist_key(artist_sort_key, exclude);
 
         let mut updated_ids = Vec::with_capacity(matching.len());
         for id in matching {
@@ -337,7 +331,7 @@ fn build_library(
                     cache_changed = true;
                 }
                 next_cache.insert(relative, Entry { size, mtime, probed: Probed::Tags(metadata.clone()) });
-                let song = Song::from_cached_with_stat(path, size, mtime, metadata);
+                let song = Song::from_cached(path, mtime, metadata);
                 insert_song(&mut songs, song, stats);
             }
         }

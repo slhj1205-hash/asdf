@@ -4,8 +4,7 @@ use crate::strings::{self, plural};
 use super::App;
 use super::modes::Mode;
 use super::state::{
-    MetadataEditModal, MetadataField, RomanizedArtistConfirmModal, Row, StatusKind,
-    heading_selected_message,
+    MetadataEditModal, MetadataField, RomanizedArtistConfirmModal, StatusKind,
 };
 
 impl App {
@@ -14,30 +13,25 @@ impl App {
     }
 
     pub(super) fn open_metadata_modal(&mut self) {
-        match self.selected_row() {
-            Some(Row::Song(id, _)) => {
-                let Some(song) = self.library.get(id) else {
-                    self.set_status(
-                        "selected song is no longer in the library",
-                        StatusKind::Error,
-                    );
-                    return;
-                };
-                let edits = MetadataEdits::from_metadata(song.metadata());
-                let original_artist_sort = edits.artist_sort.clone();
-                self.set_metadata_modal(MetadataEditModal {
-                    song: id,
-                    edits,
-                    original_artist_sort,
-                    focused: MetadataField::Title,
-                    error: None,
-                });
-            }
-            Some(Row::Header(heading)) => {
-                self.set_status(heading_selected_message(&heading), StatusKind::Info);
-            }
-            None => self.set_status(strings::SELECT_SONG_FIRST, StatusKind::Info),
-        }
+        let Some(id) = self.selected_song_or_warn() else {
+            return;
+        };
+        let Some(song) = self.library.get(id) else {
+            self.set_status(
+                "selected song is no longer in the library",
+                StatusKind::Error,
+            );
+            return;
+        };
+        let edits = MetadataEdits::from_metadata(song.metadata());
+        let original_artist_sort = edits.artist_sort.clone();
+        self.set_metadata_modal(MetadataEditModal {
+            song: id,
+            edits,
+            original_artist_sort,
+            focused: MetadataField::Title,
+            error: None,
+        });
     }
 
     pub(super) fn save_metadata_edit_and_prompt(&mut self, modal: MetadataEditModal) {

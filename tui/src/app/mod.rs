@@ -22,7 +22,7 @@ use crate::{Backend, config, strings};
 
 pub use row_builder::{RowCache, group_label};
 pub use state::{
-    Category, ChooseActionField, DirScanState, DownloadStatus, FetchStatus, LibraryPanelState,
+    Category, ChooseActionField, Cycleable, DirScanState, DownloadStatus, FetchStatus, LibraryPanelState,
     MeasuredLayout, MetadataEditModal, MetadataField, Panel, PlaylistDisplayMode,
     PlaylistPanelState, PlaylistView, QueueSource, RomanizedArtistConfirmModal, Row, PlaylistPicker,
     SongModal, Sort, StatusKind, StatusMessage, VisualSelection, YoutubeField, YoutubeFieldsModal,

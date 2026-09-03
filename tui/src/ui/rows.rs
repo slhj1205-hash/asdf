@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use lyre_core::{Library, Song, SongId};
 use ratatui::{
     buffer::Buffer,
@@ -8,7 +10,10 @@ use ratatui::{
 };
 
 use crate::{
-    app::{INDENT_UNIT, PlaylistDisplayMode, Row, is_filtering, song_row_count},
+    app::{
+        Category, Cycleable, INDENT_UNIT, PlaylistDisplayMode, Row, Sort, group_label,
+        is_filtering, song_row_count,
+    },
     theme,
 };
 
@@ -220,6 +225,62 @@ pub struct SongListContext<'a> {
     pub current: Option<SongId>,
     pub library: &'a Library,
     pub playlist_info: Option<PlaylistLookup<'a>>,
+}
+
+pub struct SongPanelInputs<'a> {
+    pub title_prefix: &'a str,
+    pub category: Category,
+    pub sort: Sort,
+    pub query: &'a str,
+    pub search_mode_open: bool,
+    pub visual_range: Option<(usize, usize)>,
+    pub root: &'a Path,
+}
+
+pub fn render_song_panel(
+    area: Rect,
+    buf: &mut Buffer,
+    list_state: &mut ListState,
+    rows: &[Row],
+    ctx: SongListContext<'_>,
+    inputs: SongPanelInputs<'_>,
+) -> PanelHeight {
+    let SongPanelInputs {
+        title_prefix,
+        category,
+        sort,
+        query,
+        search_mode_open,
+        visual_range,
+        root,
+    } = inputs;
+    let filtering = is_filtering(query);
+
+    let group_label_fn = |song: &Song| -> Option<String> {
+        if filtering {
+            None
+        } else {
+            group_label(song, category, root)
+        }
+    };
+
+    let opts = SongListPanelOptions {
+        visual_range,
+        title_prefix,
+        category_label: category.label(),
+        sort_label: sort.label(),
+        search_mode_open,
+        query,
+        group_label: Some(&group_label_fn),
+    };
+
+    render_song_list_panel(area, buf, list_state, rows, opts, ctx, |song| {
+        if filtering {
+            label_for(song, None, sort)
+        } else {
+            label_for(song, Some(category), sort)
+        }
+    })
 }
 
 pub struct SongListPanelOptions<'a> {

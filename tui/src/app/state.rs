@@ -54,23 +54,16 @@ pub enum Category {
     Path,
 }
 
-impl Category {
-    pub const ALL: &'static [Category] = &[Category::None, Category::Artist, Category::Path];
+impl Cycleable for Category {
+    const ALL: &'static [Category] = &[Category::None, Category::Artist, Category::Path];
+    const VERB: &'static str = "grouped by";
 
-    pub fn label(&self) -> &'static str {
+    fn label(self) -> &'static str {
         match self {
             Category::None => "none",
             Category::Artist => "artist",
             Category::Path => "path",
         }
-    }
-
-    pub fn next(self) -> Category {
-        cycle(Self::ALL, self, 1)
-    }
-
-    pub fn prev(self) -> Category {
-        cycle(Self::ALL, self, -1)
     }
 }
 
@@ -85,16 +78,17 @@ pub enum Sort {
     DateModified,
 }
 
-impl Sort {
-    pub const ALL: &'static [Sort] = &[
+impl Cycleable for Sort {
+    const ALL: &'static [Sort] = &[
         Sort::Title,
         Sort::Duration,
         Sort::Artist,
         Sort::Path,
         Sort::DateModified,
     ];
+    const VERB: &'static str = "sorted by";
 
-    pub fn label(&self) -> &'static str {
+    fn label(self) -> &'static str {
         match self {
             Sort::Title => "title",
             Sort::Duration => "duration",
@@ -103,18 +97,21 @@ impl Sort {
             Sort::DateModified => "date modified",
         }
     }
-
-    pub fn next(self) -> Sort {
-        cycle(Self::ALL, self, 1)
-    }
-
-    pub fn prev(self) -> Sort {
-        cycle(Self::ALL, self, -1)
-    }
 }
 
 pub fn is_filtering(query: &str) -> bool {
     query.split_whitespace().next().is_some()
+}
+
+pub trait Cycleable: Copy + PartialEq + 'static {
+    const ALL: &'static [Self];
+    const VERB: &'static str;
+
+    fn label(self) -> &'static str;
+
+    fn step(self, delta: isize) -> Self {
+        cycle(Self::ALL, self, delta)
+    }
 }
 
 pub(crate) fn cycle<T: Copy + PartialEq>(all: &[T], current: T, delta: isize) -> T {

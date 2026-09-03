@@ -105,8 +105,12 @@ impl App {
                 Panel::Library => self.modes.open(Mode::SearchLibrary),
                 Panel::Playlists => self.modes.open(Mode::SearchPlaylists),
             },
-            Command::CycleCategory(direction) => self.cycle_category(direction),
-            Command::CycleSort(direction) => self.cycle_sort(direction),
+            Command::CycleCategory(direction) => {
+                self.cycle_active_field(direction, App::active_category_mut)
+            }
+            Command::CycleSort(direction) => {
+                self.cycle_active_field(direction, App::active_sort_mut)
+            }
             Command::CyclePlaylistDisplayMode => self.cycle_library_playlist_mode(),
             Command::Shuffle => {
                 self.queue.shuffle();

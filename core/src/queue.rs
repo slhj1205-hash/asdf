@@ -78,18 +78,18 @@ impl Queue {
         self.cursor = playing_song.and_then(|id| self.order.iter().position(|&song| song == id));
     }
 
-    fn current_song_id(&self) -> Option<SongId> {
+    fn cursor_song_id(&self) -> Option<SongId> {
         self.cursor.and_then(|p| self.order.get(p).copied())
     }
 
     pub fn shuffle(&mut self) {
-        let current = self.current_song_id();
+        let current = self.cursor_song_id();
         random::shuffle(&mut self.order);
         self.reindex(current);
     }
 
     pub fn unshuffle(&mut self) {
-        let current = self.current_song_id();
+        let current = self.cursor_song_id();
         self.order = self.base.clone();
         self.reindex(current);
     }
