@@ -17,120 +17,27 @@ pub struct Library {
 }
 
 impl Library {
-    pub fn scan(
-        root: impl AsRef<Path>,
-        cache_path: impl AsRef<Path>,
-    ) -> Result<(Library, ScanStats), Error> {
-        let root = root.as_ref();
+    pub fn scan(root: impl AsRef<Path>, cache_path: impl AsRef<Path>) -> Result<(Library, ScanStats), Error> {
+        let root = validate_root(root.as_ref())?;
         let cache_path = cache_path.as_ref();
-
-        if !root.exists() {
-            return Err(Error::PathNotFound(root.to_path_buf()));
-        }
-        if !root.is_dir() {
-            return Err(Error::NotADirectory(root.to_path_buf()));
-        }
-        let root = root
-            .canonicalize()
-            .map_err(|_| Error::PathNotFound(root.to_path_buf()))?;
-
         let cache = ScanCache::load(cache_path);
-        let mut stats = ScanStats::default();
 
+        let mut stats = ScanStats::default();
         let mut files = Vec::new();
         collect_files(&root, &mut files, &mut stats);
-
         files.sort_unstable();
         stats.files_considered = files.len();
 
-        let outcomes: Vec<Outcome> = files
-            .par_iter()
-            .map(|path| probe_file(path, &root, &cache))
-            .collect();
-
-        let mut songs: HashMap<SongId, Song> = HashMap::with_capacity(files.len());
-        let mut next_cache = ScanCache::new();
-        let mut cache_changed = false;
-
-        for (path, outcome) in files.into_iter().zip(outcomes) {
-            let Outcome {
-                size,
-                mtime,
-                result,
-            } = outcome;
-
-            let relative = path.strip_prefix(&root).unwrap_or(&path).to_path_buf();
-
-            match result {
-                ProbeResult::NoMetadata => {
-                    stats.skipped_files += 1;
-                    continue;
-                }
-                ProbeResult::Unreadable { freshly_probed } => {
-                    stats.skipped_files += 1;
-                    if freshly_probed {
-                        stats.reprobed += 1;
-                        cache_changed = true;
-                    } else {
-                        stats.cache_hits += 1;
-                    }
-                    next_cache.insert(
-                        relative,
-                        Entry {
-                            size,
-                            mtime,
-                            probed: Probed::Unreadable,
-                        },
-                    );
-                }
-                ProbeResult::Tags {
-                    metadata,
-                    freshly_probed,
-                } => {
-                    if freshly_probed {
-                        stats.reprobed += 1;
-                        cache_changed = true;
-                    } else {
-                        stats.cache_hits += 1;
-                    }
-                    next_cache.insert(
-                        relative,
-                        Entry {
-                            size,
-                            mtime,
-                            probed: Probed::Tags(metadata.clone()),
-                        },
-                    );
-
-                    let song = Song::from_cached_with_stat(path, size, mtime, metadata);
-                    match songs.entry(song.id()) {
-                        hash_map::Entry::Vacant(entry) => {
-                            entry.insert(song);
-                        }
-                        hash_map::Entry::Occupied(entry) => {
-                            stats.skipped_files += 1;
-                            if entry.get().path() != song.path() {
-                                stats.warnings.push(format!(
-                                        "song id collision between {} and {} -- kept the first, skipped the second",
-                                        entry.get().path().display(),
-                                        song.path().display()
-                                ));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
+        let outcomes = probe_all(&files, &root, &cache);
+        let (songs, next_cache, mut cache_changed) = build_library(&root, files, outcomes, &mut stats);
         if next_cache.len() != cache.len() {
             cache_changed = true;
         }
-        if cache_changed && let Err(message) = next_cache.save(cache_path) {
-            stats.warnings.push(message);
-        }
+        maybe_save_cache(cache_path, &next_cache, cache_changed, &mut stats);
 
         Ok((Library { root, songs }, stats))
     }
+
 
     pub fn empty(root: impl Into<PathBuf>) -> Library {
         Library {
@@ -154,6 +61,7 @@ impl Library {
     pub fn len(&self) -> usize {
         self.songs.len()
     }
+
     pub fn is_empty(&self) -> bool {
         self.songs.is_empty()
     }
@@ -286,8 +194,8 @@ fn collect_files(dir: &Path, files: &mut Vec<PathBuf>, stats: &mut ScanStats) {
             Ok(entries) => entries,
             Err(e) => {
                 stats.warnings.push(format!(
-                    "failed to read directory {}: {e}",
-                    current.display()
+                        "failed to read directory {}: {e}",
+                        current.display()
                 ));
                 stats.unreadable_dirs += 1;
                 continue;
@@ -352,6 +260,96 @@ enum ProbeResult {
         freshly_probed: bool,
     },
     NoMetadata,
+}
+
+fn validate_root(root: &Path) -> Result<PathBuf, Error> {
+    if !root.exists() {
+        return Err(Error::PathNotFound(root.to_path_buf()));
+    }
+    if !root.is_dir() {
+        return Err(Error::NotADirectory(root.to_path_buf()));
+    }
+    root.canonicalize()
+        .map_err(|_| Error::PathNotFound(root.to_path_buf()))
+}
+
+fn probe_all(files: &[PathBuf], root: &Path, cache: &ScanCache) -> Vec<Outcome> {
+    files.par_iter()
+        .map(|path| probe_file(path, root, cache))
+        .collect()
+}
+
+fn note_probe(stats: &mut ScanStats, freshly_probed: bool) {
+    if freshly_probed {
+        stats.reprobed += 1;
+    } else {
+        stats.cache_hits += 1;
+    }
+}
+
+fn insert_song(songs: &mut HashMap<SongId, Song>, song: Song, stats: &mut ScanStats) {
+    match songs.entry(song.id()) {
+        hash_map::Entry::Vacant(entry) => {
+            entry.insert(song);
+        }
+        hash_map::Entry::Occupied(entry) => {
+            stats.skipped_files += 1;
+            if entry.get().path() != song.path() {
+                stats.warnings.push(format!(
+                        "song id collision between {} and {} -- kept the first, skipped the second",
+                        entry.get().path().display(),
+                        song.path().display()
+                ));
+            }
+        }
+    }
+}
+
+fn build_library(
+    root: &Path,
+    files: Vec<PathBuf>,
+    outcomes: Vec<Outcome>,
+    stats: &mut ScanStats,
+) -> (HashMap<SongId, Song>, ScanCache, bool) {
+    let mut songs = HashMap::with_capacity(files.len());
+    let mut next_cache = ScanCache::new();
+    let mut cache_changed = false;
+
+    for (path, outcome) in files.into_iter().zip(outcomes) {
+        let Outcome { size, mtime, result } = outcome;
+        let relative = path.strip_prefix(root).unwrap_or(&path).to_path_buf();
+
+        match result {
+            ProbeResult::NoMetadata => {
+                stats.skipped_files += 1;
+            }
+            ProbeResult::Unreadable { freshly_probed } => {
+                stats.skipped_files += 1;
+                note_probe(stats, freshly_probed);
+                if freshly_probed {
+                    cache_changed = true;
+                }
+                next_cache.insert(relative, Entry { size, mtime, probed: Probed::Unreadable });
+            }
+            ProbeResult::Tags { metadata, freshly_probed } => {
+                note_probe(stats, freshly_probed);
+                if freshly_probed {
+                    cache_changed = true;
+                }
+                next_cache.insert(relative, Entry { size, mtime, probed: Probed::Tags(metadata.clone()) });
+                let song = Song::from_cached_with_stat(path, size, mtime, metadata);
+                insert_song(&mut songs, song, stats);
+            }
+        }
+    }
+
+    (songs, next_cache, cache_changed)
+}
+
+fn maybe_save_cache(cache_path: &Path, next_cache: &ScanCache, changed: bool, stats: &mut ScanStats) {
+    if changed && let Err(message) = next_cache.save(cache_path) {
+        stats.warnings.push(message);
+    }
 }
 
 fn probe_file(path: &Path, root: &Path, cache: &ScanCache) -> Outcome {
