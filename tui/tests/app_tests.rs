@@ -6,7 +6,7 @@
 )]
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use lyre_core::{Library, MetadataEdits, PlaylistStore};
+use lyre_core::{Library, MetadataEdits, PlaylistStore, SongId};
 use ratatui::{buffer::Buffer, layout::Rect, style::{Color, Style}, widgets::Widget};
 
 use lyre_tui::{
@@ -246,6 +246,20 @@ fn song_titles(app: &mut App) -> Vec<String> {
             Row::Header(_) => None,
         })
         .collect()
+}
+
+fn visible_song_ids(app: &mut App) -> Vec<SongId> {
+    app.visible_rows()
+        .iter()
+        .filter_map(|r| match r {
+            Row::Song(id, _) => Some(*id),
+            Row::Header(_) => None,
+        })
+        .collect()
+}
+
+fn queued_ids(app: &App) -> Vec<SongId> {
+    app.queue.ordered_ids().collect()
 }
 
 fn header_names(app: &mut App) -> Vec<String> {
@@ -1220,6 +1234,98 @@ fn a_queues_the_selected_song_next() {
     h.app.on_key(key('a'));
 
     assert_eq!(h.app.queue.priority_queue().front(), Some(&id));
+}
+
+#[test]
+fn the_queue_follows_the_panel_sort_order() {
+    let mut h = harness();
+    h.app.library_panel.sort = Sort::Duration;
+    h.app.on_key(key('g'));
+    h.app.on_key(special(KeyCode::Enter));
+
+    assert_eq!(
+        queued_ids(&h.app),
+        visible_song_ids(&mut h.app),
+        "the queue must play the songs in the order the panel shows them"
+    );
+}
+
+#[test]
+fn changing_the_sort_key_rebuilds_the_queue_on_the_next_play() {
+    let mut h = harness();
+    h.app.on_key(key('g'));
+    h.app.on_key(special(KeyCode::Enter));
+    let by_title = queued_ids(&h.app);
+
+    h.app.library_panel.sort = Sort::Duration;
+    h.app.on_key(key('g'));
+    h.app.on_key(special(KeyCode::Enter));
+    let by_duration = queued_ids(&h.app);
+
+    assert_ne!(by_title, by_duration, "a new sort key must reorder the queue");
+    assert_eq!(by_duration, visible_song_ids(&mut h.app));
+}
+
+#[test]
+fn a_search_does_not_narrow_the_queue() {
+    let mut h = harness();
+    h.app.on_key(key('g'));
+    h.app.on_key(special(KeyCode::Enter));
+    let before = queued_ids(&h.app);
+    assert_eq!(before.len(), 6);
+
+    h.app.library_panel.search_query = "azure".into();
+    assert_eq!(song_titles(&mut h.app), vec!["Azure"]);
+
+    h.app.on_key(key('g'));
+    h.app.on_key(special(KeyCode::Enter));
+
+    assert_eq!(
+        queued_ids(&h.app),
+        before,
+        "playing a search result must keep the whole library in the queue"
+    );
+}
+
+#[test]
+fn replaying_the_same_list_keeps_the_shuffle_order() {
+    let mut h = harness();
+    h.app.on_key(key('g'));
+    h.app.on_key(special(KeyCode::Enter));
+    h.app.on_key(key('s'));
+    let shuffled = h.app.queue.upcoming(6);
+
+    h.app.on_key(key('c'));
+    h.app.on_key(special(KeyCode::Enter));
+
+    assert_eq!(
+        h.app.queue.upcoming(6),
+        shuffled,
+        "a replay of the same list must not undo the shuffle"
+    );
+}
+
+#[test]
+fn the_playlist_queue_follows_the_panel_order_not_the_stored_order() {
+    let mut h = harness();
+    let stored: Vec<SongId> = h.app.library.ids_by_path().into_iter().rev().collect();
+    let id = h.app.playlists.create("Mix");
+    for song in &stored {
+        h.app.playlists.add_song(id, *song);
+    }
+
+    h.app.panel = Panel::Playlists;
+    h.app.playlist_panel.view = PlaylistView::Viewing(id);
+    h.app.playlist_panel.sort = Sort::Duration;
+    h.app.playlist_panel.list_state.select(Some(0));
+    h.app.on_key(special(KeyCode::Enter));
+
+    assert_eq!(queued_ids(&h.app), visible_song_ids(&mut h.app));
+    assert_ne!(
+        queued_ids(&h.app),
+        stored,
+        "the stored playlist order must not decide playback order"
+    );
 }
 
 #[test]

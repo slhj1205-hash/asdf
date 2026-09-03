@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::{library::Library, playlist::Playlist, random, song::SongId};
+use crate::{library::Library, random, song::SongId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum NowPlaying {
@@ -29,8 +29,8 @@ impl Queue {
         }
     }
 
-    pub fn from_playlist(playlist: &Playlist) -> Queue {
-        Queue::new(playlist.songs().to_vec())
+    pub fn has_base(&self, ids: &[SongId]) -> bool {
+        self.base == ids
     }
 
     pub fn insert(&mut self, id: SongId) {

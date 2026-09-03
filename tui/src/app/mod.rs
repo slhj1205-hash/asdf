@@ -16,7 +16,7 @@ use std::{path::PathBuf, time::Duration};
 use crossterm::event;
 use ratatui::{DefaultTerminal, widgets::ListState};
 
-use lyre_core::{Library, Player, PlaylistStore, Queue, SaveOutcome, SongId};
+use lyre_core::{Library, Player, PlaylistStore, Queue, SaveOutcome};
 
 use crate::{Backend, config, strings};
 
@@ -50,7 +50,6 @@ pub struct App {
     queue_source: QueueSource,
     pub player: Player<Backend>,
     pub playlists: PlaylistStore,
-    display_order: Vec<SongId>,
 
     pub(crate) library_revision: u64,
     pub rows: RowCache,
@@ -75,11 +74,10 @@ pub struct App {
 
 impl App {
     pub fn new(library: Library, playlists: PlaylistStore, backend: Backend) -> App {
-        let display_order: Vec<SongId> = library.ids_by_path().to_vec();
-        let queue = Queue::new(display_order.clone());
+        let queue = Queue::new(library.ids_by_path());
 
         let mut library_panel = LibraryPanelState::default();
-        if !display_order.is_empty() {
+        if !library.is_empty() {
             library_panel.list_state.select(Some(0));
         }
 
@@ -105,7 +103,6 @@ impl App {
             queue_source: QueueSource::Library,
             player: Player::new(backend),
             playlists,
-            display_order,
             library_revision: 0,
             rows: RowCache::default(),
             animating: std::cell::Cell::new(false),
@@ -232,8 +229,7 @@ impl App {
                 let stop_error = self.player.stop().err();
 
                 self.cancel_visual_select();
-                self.display_order = library.ids_by_path().to_vec();
-                self.queue = Queue::new(self.display_order.clone());
+                self.queue = Queue::new(library.ids_by_path());
                 self.queue_source = QueueSource::Library;
                 self.library_panel.list_state = ListState::default();
                 self.sync_selection_to_rows();

@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, path::Path};
 
-use lyre_core::{FuzzyQuery, PlaylistId, Song};
+use lyre_core::{FuzzyQuery, Song, SongId};
 
 use super::App;
 use super::state::{Category, Panel, PlaylistView, Row, Sort, is_filtering};
@@ -28,22 +28,56 @@ impl RowCache {
 }
 
 impl App {
+    fn active_panel_songs(&self) -> Vec<&Song> {
+        match self.panel {
+            Panel::Library => self.library.songs_by_path().collect(),
+            Panel::Playlists => match self.playlist_panel.view {
+                PlaylistView::Browsing => Vec::new(),
+                PlaylistView::Viewing(id) => match self.playlists.get(id) {
+                    Some(playlist) => playlist
+                        .songs()
+                        .iter()
+                        .filter_map(|&song| self.library.get(song))
+                        .collect(),
+                    None => Vec::new(),
+                },
+            },
+        }
+    }
+
+    fn active_panel_grouping(&self) -> (Category, Sort) {
+        match self.panel {
+            Panel::Library => (self.library_panel.category, self.library_panel.sort),
+            Panel::Playlists => (self.playlist_panel.category, self.playlist_panel.sort),
+        }
+    }
+
+    fn active_search_query(&self) -> &str {
+        match self.panel {
+            Panel::Library => &self.library_panel.search_query,
+            Panel::Playlists => &self.playlist_panel.search_query,
+        }
+    }
+
+    fn active_playlist_view(&self) -> PlaylistView {
+        match self.panel {
+            Panel::Library => PlaylistView::Browsing,
+            Panel::Playlists => self.playlist_panel.view,
+        }
+    }
+
+    pub(super) fn queue_order(&self) -> Vec<SongId> {
+        let mut songs = self.active_panel_songs();
+        let (category, sort) = self.active_panel_grouping();
+        sort_songs(&mut songs, category, sort, self.library.root());
+        songs.iter().map(|song| song.id()).collect()
+    }
+
     fn row_context(&self) -> (Panel, PlaylistView, Category, Sort, u64, u64) {
-        let (view, category, sort) = match self.panel {
-            Panel::Library => (
-                PlaylistView::Browsing,
-                self.library_panel.category,
-                self.library_panel.sort,
-            ),
-            Panel::Playlists => (
-                self.playlist_panel.view,
-                self.playlist_panel.category,
-                self.playlist_panel.sort,
-            ),
-        };
+        let (category, sort) = self.active_panel_grouping();
         (
             self.panel,
-            view,
+            self.active_playlist_view(),
             category,
             sort,
             self.library_revision,
@@ -54,10 +88,7 @@ impl App {
     pub fn visible_rows(&mut self) -> &[Row] {
         let (panel, view, category, sort, library_revision, playlists_revision) =
             self.row_context();
-        let query: &str = match self.panel {
-            Panel::Library => &self.library_panel.search_query,
-            Panel::Playlists => &self.playlist_panel.search_query,
-        };
+        let query = self.active_search_query();
 
         let matches = self.rows.key.as_ref().is_some_and(|key| {
             key.panel == panel
@@ -97,52 +128,15 @@ impl App {
     }
 
     fn build_rows_into(&self, out: &mut Vec<Row>) {
-        match self.panel {
-            Panel::Library => {
-                if !is_filtering(&self.library_panel.search_query) {
-                    let songs: Vec<&Song> = self.library.songs_by_path().collect();
-                    build_rows(
-                        songs,
-                        self.library_panel.category,
-                        self.library_panel.sort,
-                        self.library.root(),
-                        out,
-                    );
-                } else {
-                    let query = FuzzyQuery::new(&self.library_panel.search_query);
-                    let songs = fuzzy_filter_and_sort(self.library.songs_by_path(), &query);
-                    build_relevance_rows(songs, out);
-                }
-            }
-            Panel::Playlists => match self.playlist_panel.view {
-                PlaylistView::Browsing => {}
-                PlaylistView::Viewing(id) => self.build_playlist_rows_into(id, out),
-            },
-        }
-    }
+        let songs = self.active_panel_songs();
+        let raw_query = self.active_search_query();
 
-    fn build_playlist_rows_into(&self, id: PlaylistId, out: &mut Vec<Row>) {
-        let Some(playlist) = self.playlists.get(id) else {
-            return;
-        };
-        let songs_iter = playlist
-            .songs()
-            .iter()
-            .filter_map(|&id| self.library.get(id));
-
-        if !is_filtering(&self.playlist_panel.search_query) {
-            let songs: Vec<&Song> = songs_iter.collect();
-            build_rows(
-                songs,
-                self.playlist_panel.category,
-                self.playlist_panel.sort,
-                self.library.root(),
-                out,
-            );
+        if is_filtering(raw_query) {
+            let query = FuzzyQuery::new(raw_query);
+            build_relevance_rows(fuzzy_filter_and_sort(songs.into_iter(), &query), out);
         } else {
-            let query = FuzzyQuery::new(&self.playlist_panel.search_query);
-            let songs = fuzzy_filter_and_sort(songs_iter, &query);
-            build_relevance_rows(songs, out);
+            let (category, sort) = self.active_panel_grouping();
+            build_rows(songs, category, sort, self.library.root(), out);
         }
     }
 }
@@ -209,6 +203,24 @@ pub fn group_label(song: &Song, category: Category, root: &Path) -> Option<Strin
     }
 }
 
+fn sort_songs(songs: &mut [&Song], category: Category, sort: Sort, root: &Path) {
+    let within_group = sort_comparator(sort);
+
+    match category {
+        Category::None => songs.sort_unstable_by(|a, b| within_group(a, b)),
+        Category::Artist => songs.sort_unstable_by(|a, b| {
+            a.sort_artist()
+                .cmp(b.sort_artist())
+                .then_with(|| within_group(a, b))
+        }),
+        Category::Path => songs.sort_unstable_by(|a, b| {
+            relative_parent(a, root)
+                .cmp(relative_parent(b, root))
+                .then_with(|| within_group(a, b))
+        }),
+    }
+}
+
 fn build_rows(
     mut songs: Vec<&Song>,
     category: Category,
@@ -217,20 +229,13 @@ fn build_rows(
     rows: &mut Vec<Row>,
 ) {
     rows.reserve(songs.len());
-    let within_group = sort_comparator(sort);
+    sort_songs(&mut songs, category, sort, root);
 
     match category {
         Category::None => {
-            songs.sort_unstable_by(|a, b| within_group(a, b));
             rows.extend(songs.into_iter().map(|s| Row::Song(s.id(), 0)));
         }
         Category::Artist => {
-            songs.sort_unstable_by(|a, b| {
-                a.sort_artist()
-                    .cmp(b.sort_artist())
-                    .then_with(|| within_group(a, b))
-            });
-
             let mut last_artist: Option<&str> = None;
             for song in songs {
                 if last_artist != Some(song.artist()) {
@@ -241,12 +246,6 @@ fn build_rows(
             }
         }
         Category::Path => {
-            songs.sort_unstable_by(|a, b| {
-                relative_parent(a, root)
-                    .cmp(relative_parent(b, root))
-                    .then_with(|| within_group(a, b))
-            });
-
             let mut last_dirs: Vec<String> = Vec::new();
             for song in songs {
                 let comps: Vec<_> = relative_parent(song, root).components().collect();

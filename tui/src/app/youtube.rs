@@ -162,7 +162,6 @@ impl App {
         let label = song.to_string();
         match self.library.insert(song) {
             InsertOutcome::Inserted(id) => {
-                self.display_order.push(id);
                 if self.queue_source() == super::QueueSource::Library {
                     self.queue.insert(id);
                 }

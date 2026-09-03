@@ -44,8 +44,9 @@ impl App {
     pub(super) fn play_selected_library(&mut self) {
         match self.selected_row() {
             Some(Row::Song(id, _)) => {
-                if self.queue_source != QueueSource::Library {
-                    self.queue = Queue::new(self.display_order.clone());
+                let ids = self.queue_order();
+                if self.queue_source != QueueSource::Library || !self.queue.has_base(&ids) {
+                    self.queue = Queue::new(ids);
                     self.queue_source = QueueSource::Library;
                 }
                 if let Some(played) = self.queue.play_id(id) {
@@ -90,11 +91,11 @@ impl App {
         }
         match self.selected_row() {
             Some(Row::Song(song_id, _)) => {
-                let Some(playlist) = self.playlists.get(id) else {
-                    return;
-                };
-                self.queue = Queue::from_playlist(playlist);
-                self.queue_source = QueueSource::Playlist(id);
+                let ids = self.queue_order();
+                if self.queue_source != QueueSource::Playlist(id) || !self.queue.has_base(&ids) {
+                    self.queue = Queue::new(ids);
+                    self.queue_source = QueueSource::Playlist(id);
+                }
                 if let Some(played) = self.queue.play_id(song_id) {
                     self.play_current(played);
                 }
