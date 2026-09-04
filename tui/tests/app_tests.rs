@@ -1208,6 +1208,28 @@ fn metadata_modal_editing_the_title_and_saving_updates_the_library() {
 }
 
 #[test]
+fn a_metadata_edit_refreshes_the_rows_without_a_manual_invalidate() {
+    let mut h = harness();
+    h.app.on_key(key('g'));
+    assert!(song_titles(&mut h.app).contains(&"Anchor".to_string()));
+
+    h.app.on_key(key('e'));
+    for _ in 0..32 {
+        h.app.on_key(special(KeyCode::Backspace));
+    }
+    for c in "Retitled".chars() {
+        h.app.on_key(key(c));
+    }
+    h.app.on_key(special(KeyCode::Enter));
+
+    assert_eq!(
+        song_titles(&mut h.app),
+        vec!["Azure", "Beacon", "Bright", "Glimmer", "Grove", "Retitled"],
+        "the rows must be rebuilt and resorted under the new title"
+    );
+}
+
+#[test]
 fn metadata_modal_saving_a_non_numeric_track_keeps_the_modal_open_with_an_error() {
     let mut h = harness();
     h.app.on_key(key('g'));

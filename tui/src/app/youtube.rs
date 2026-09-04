@@ -165,7 +165,6 @@ impl App {
                 if self.queue_source() == super::QueueSource::Library {
                     self.queue.insert(id);
                 }
-                self.library_revision += 1;
                 self.rows.invalidate();
                 self.set_status(
                     format!("downloaded and added: {label}"),

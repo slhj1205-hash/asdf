@@ -125,10 +125,6 @@ fn playlist_suffix(
     }
 }
 
-pub fn song_count(rows: &[Row]) -> usize {
-    song_row_count(rows)
-}
-
 pub type PlaylistLookup<'a> = (PlaylistDisplayMode, &'a dyn Fn(SongId) -> Vec<String>);
 pub type GroupLabelLookup<'a> = &'a dyn Fn(&Song) -> Option<String>;
 
@@ -429,7 +425,7 @@ pub fn render_song_list_panel(
         group_label,
     } = opts;
 
-    let match_count = song_count(rows);
+    let match_count = song_row_count(rows);
     let border_style = if search_mode_open {
         focus_style()
     } else {

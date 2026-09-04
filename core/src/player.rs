@@ -172,15 +172,9 @@ impl<B: AudioBackend> Player<B> {
     }
 }
 
-#[cfg(unix)]
 fn path_bytes(path: &Path) -> Vec<u8> {
     use std::os::unix::ffi::OsStrExt;
     path.as_os_str().as_bytes().to_vec()
-}
-
-#[cfg(not(unix))]
-fn path_bytes(path: &Path) -> Vec<u8> {
-    path.to_string_lossy().into_owned().into_bytes()
 }
 
 fn path_to_uri(path: &Path) -> Result<String, Error> {

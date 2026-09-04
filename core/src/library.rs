@@ -14,6 +14,7 @@ use crate::{
 pub struct Library {
     root: PathBuf,
     songs: HashMap<SongId, Song>,
+    revision: u64,
 }
 
 impl Library {
@@ -35,7 +36,7 @@ impl Library {
         }
         maybe_save_cache(cache_path, &next_cache, cache_changed, &mut stats);
 
-        Ok((Library { root, songs }, stats))
+        Ok((Library { root, songs, revision: 0 }, stats))
     }
 
 
@@ -43,7 +44,16 @@ impl Library {
         Library {
             root: root.into(),
             songs: HashMap::new(),
+            revision: 0,
         }
+    }
+
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
+
+    pub fn set_revision(&mut self, value: u64) {
+        self.revision = value;
     }
 
     pub fn root(&self) -> &Path {
@@ -100,6 +110,7 @@ impl Library {
 
         let updated = Song::load(&path)?;
         self.songs.insert(id, updated);
+        self.revision += 1;
 
         Ok(())
     }
@@ -144,6 +155,7 @@ impl Library {
             hash_map::Entry::Occupied(_) => InsertOutcome::Collision,
             hash_map::Entry::Vacant(entry) => {
                 entry.insert(song);
+                self.revision += 1;
                 InsertOutcome::Inserted(id)
             }
         }

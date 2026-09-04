@@ -7,7 +7,6 @@ use std::{
 
 const BUFFER_BYTES: usize = 512;
 
-#[cfg(unix)]
 fn system_entropy() -> Option<File> {
     File::open("/dev/urandom").ok()
 }

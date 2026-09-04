@@ -45,8 +45,6 @@ impl App {
 
         match self.library.update_metadata(song, &edits) {
             Ok(()) => {
-                self.library_revision += 1;
-
                 let label = self
                     .library
                     .get(song)
@@ -111,10 +109,6 @@ impl App {
             &confirm.value,
             confirm.reference_song,
         );
-
-        if !updated.is_empty() {
-            self.library_revision += 1;
-        }
 
         let applied = updated.len();
         if applied == 0 {

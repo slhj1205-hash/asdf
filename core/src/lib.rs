@@ -1,3 +1,6 @@
+#[cfg(not(unix))]
+compile_error!("lyre runs on unix systems only");
+
 pub mod atomic;
 pub mod fnv;
 pub mod fuzzy;

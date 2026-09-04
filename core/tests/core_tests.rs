@@ -981,6 +981,40 @@ fn library_insert_adds_a_new_song_and_reports_inserted() {
 }
 
 #[test]
+fn the_library_revision_rises_on_every_write_that_changes_the_songs() {
+    let dir = TempDir::new().unwrap();
+    let first_path = write_song(dir.path(), "one.wav", "One", "Artist", "Album");
+    let second_path = write_song(dir.path(), "two.wav", "Two", "Artist", "Album");
+    let first = Song::load(&first_path).unwrap();
+    let id = first.id();
+
+    let mut library = Library::empty(dir.path());
+    let start = library.revision();
+
+    library.insert(first);
+    let after_insert = library.revision();
+    assert!(after_insert > start, "an insert must raise the revision");
+
+    library.insert(Song::load(&first_path).unwrap());
+    assert_eq!(
+        library.revision(),
+        after_insert,
+        "a collision changes nothing, so the revision must hold"
+    );
+
+    let mut edits = MetadataEdits::from_metadata(library.get(id).unwrap().metadata());
+    edits.title = "Renamed".to_string();
+    library.update_metadata(id, &edits).unwrap();
+    assert!(
+        library.revision() > after_insert,
+        "a metadata write must raise the revision"
+    );
+
+    library.insert(Song::load(&second_path).unwrap());
+    assert!(library.revision() > after_insert + 1);
+}
+
+#[test]
 fn library_insert_reports_a_collision_without_replacing_the_existing_song() {
     let dir = TempDir::new().unwrap();
     let path = write_song(dir.path(), "one.wav", "One", "Artist", "Album");

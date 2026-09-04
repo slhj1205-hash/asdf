@@ -51,7 +51,6 @@ pub struct App {
     pub player: Player<Backend>,
     pub playlists: PlaylistStore,
 
-    pub(crate) library_revision: u64,
     pub rows: RowCache,
 
     pub(crate) animating: std::cell::Cell<bool>,
@@ -103,7 +102,6 @@ impl App {
             queue_source: QueueSource::Library,
             player: Player::new(backend),
             playlists,
-            library_revision: 0,
             rows: RowCache::default(),
             animating: std::cell::Cell::new(false),
             status,
@@ -225,7 +223,8 @@ impl App {
         let cache_path = crate::config::scan_cache_path(&new_dir);
 
         match Library::scan(&new_dir, &cache_path) {
-            Ok((library, stats)) => {
+            Ok((mut library, stats)) => {
+                library.set_revision(self.library.revision() + 1);
                 let stop_error = self.player.stop().err();
 
                 self.cancel_visual_select();
@@ -291,7 +290,6 @@ impl App {
                 self.reset_dir_input();
                 self.library_panel.search_query.clear();
                 self.library = library;
-                self.library_revision += 1;
                 self.rows.invalidate();
             }
             Err(e) => {

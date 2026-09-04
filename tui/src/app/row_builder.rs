@@ -80,7 +80,7 @@ impl App {
             self.active_playlist_view(),
             category,
             sort,
-            self.library_revision,
+            self.library.revision(),
             self.playlists.revision(),
         )
     }
