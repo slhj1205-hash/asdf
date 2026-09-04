@@ -213,11 +213,24 @@ fn sort_songs(songs: &mut [&Song], category: Category, sort: Sort, root: &Path) 
                 .cmp(b.sort_artist())
                 .then_with(|| within_group(a, b))
         }),
-        Category::Path => songs.sort_unstable_by(|a, b| {
-            relative_parent(a, root)
-                .cmp(relative_parent(b, root))
-                .then_with(|| within_group(a, b))
-        }),
+        Category::Path => sort_by_relative_parent(songs, root, within_group),
+    }
+}
+fn sort_by_relative_parent(
+    songs: &mut [&Song],
+    root: &Path,
+    within_group: impl Fn(&Song, &Song) -> Ordering,
+) {
+    let mut decorated: Vec<(&Path, &Song)> = songs
+        .iter()
+        .map(|&song| (relative_parent(song, root), song))
+        .collect();
+    decorated.sort_unstable_by(|(a_parent, a_song), (b_parent, b_song)| {
+        a_parent.cmp(b_parent).then_with(|| within_group(a_song, b_song))
+    });
+
+    for (slot, (_, song)) in songs.iter_mut().zip(decorated) {
+        *slot = song;
     }
 }
 
